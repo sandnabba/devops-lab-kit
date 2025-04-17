@@ -1,0 +1,154 @@
+#root {
+  max-width: 1280px; /* Max width of the main content area */
+  margin: 0 auto; /* Center the content area */
+  padding: 2rem; /* Padding around the content */
+  text-align: center; /* Center-align text within the root container */
+}
+
+/* --- Button Styles --- */
+
+/* Style for the Add New Item button */
+.add-item-button {
+  margin-bottom: 20px; /* Ensure margin is here */
+  background-color: #28a745; /* Green */
+  color: white;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.add-item-button:hover {
+  background-color: #218838; /* Darker green */
+}
+
+/* Style for the Delete button within the table */
+.delete-item-button {
+  background-color: #dc3545; /* Red */
+  color: white;
+  padding: 4px 8px;
+  font-size: 0.8em;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.delete-item-button:hover {
+  background-color: #c82333; /* Darker red */
+}
+
+/* Style for the Update button within the table */
+.update-item-button {
+  background-color: #007bff; /* Blue */
+  color: white;
+  padding: 4px 8px;
+  font-size: 0.8em;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  /* Add margin if needed, or use spacing in App.tsx */
+  /* margin-right: 5px; */
+}
+
+.update-item-button:hover {
+  background-color: #0056b3; /* Darker blue */
+}
+
+/* Style for the Refresh List button */
+.refresh-button {
+  margin-top: 20px;
+  /* Add other default button styles if desired, e.g., padding, border */
+  padding: 8px 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #f8f9fa;
+  transition: background-color 0.2s ease;
+}
+
+.refresh-button:hover {
+  background-color: #e2e6ea;
+}
+
+/* Style for disabled buttons */
+.add-item-button:disabled,
+.delete-item-button:disabled,
+.update-item-button:disabled, /* Add update button */
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- Table Styles --- */
+table {
+  width: 100%; /* Make table take full width of its container */
+  border-collapse: collapse; /* Remove gaps between cells */
+  margin-top: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Optional: subtle shadow */
+}
+
+th, td {
+  border: 1px solid #ddd; /* Light grey border for cells */
+  padding: 10px 12px; /* Padding within cells */
+  text-align: left; /* Align text to the left */
+  vertical-align: middle; /* Align cell content vertically */
+}
+
+th {
+  background-color: #f8f9fa; /* Very light grey background for headers */
+  font-weight: bold; /* Make header text bold */
+  /* Adjust header text color for light/dark mode if needed */
+  color: #333;
+}
+
+/* Zebra striping for table rows (optional) */
+tbody tr:nth-child(odd) {
+  background-color: #fdfdfd;
+}
+tbody tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+/* Center align the content in the Actions column */
+td:last-child {
+  text-align: center;
+}
+
+/* --- Loading/Error Messages --- */
+p {
+  margin: 10px 0;
+}
+
+.error-message {
+  color: #dc3545; /* Red color for errors */
+  font-weight: bold;
+}
+
+/* --- Dark Mode Table Adjustments (Optional) --- */
+@media (prefers-color-scheme: dark) {
+  th {
+    background-color: #333;
+    color: #f1f1f1;
+    border-color: #555;
+  }
+  td {
+    border-color: #555;
+  }
+  tbody tr:nth-child(odd) {
+    background-color: #2c2c2c;
+  }
+  tbody tr:nth-child(even) {
+    background-color: #3a3a3a;
+  }
+
+  .update-item-button {
+     background-color: #0d6efd; /* Slightly different blue for dark mode? */
+  }
+  .update-item-button:hover {
+     background-color: #0b5ed7;
+  }
+}

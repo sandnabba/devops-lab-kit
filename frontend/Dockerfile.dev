@@ -1,0 +1,24 @@
+#
+# Dockerfile to run a Vite development server
+#
+
+# Use an official Node.js LTS image (Alpine is smaller)
+FROM node:lts-alpine
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy package.json and package-lock.json (or yarn.lock)
+# Copying these first leverages Docker layer caching
+COPY webapp/package*.json ./
+
+# Install dependencies using npm ci for faster, reliable builds from lock file
+# Use npm install if you prefer or don't have a lock file
+RUN npm install
+
+# Expose the default Vite port
+EXPOSE 5173
+
+# Command to run the development server
+# '--host' makes Vite listen on all interfaces, accessible from outside the container
+CMD ["npm", "run", "dev", "--", "--host"]
