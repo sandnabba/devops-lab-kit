@@ -1,0 +1,51 @@
+---
+- name: Deploy backend on host
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Ensure Python dependencies are present
+      apt:
+        update_cache: yes
+        name:
+          - python3
+          - python3-pip
+        state: present
+
+    - name: Create deployment directory
+      file:
+        path: /opt/inventory-backend
+        state: directory
+
+    - name: Copy backend code
+      copy:
+        src: ../../backend/
+        dest: /opt/inventory-backend
+
+    - name: Install Python dependencies
+      pip:
+        requirements: /opt/inventory-backend/requirements.txt
+        chdir: /opt/inventory-backend
+
+    - name: Create systemd service
+      copy:
+        dest: /etc/systemd/system/inventory-backend.service
+        content: |
+          [Unit]
+          Description=Inventory Backend Service
+          After=network.target
+
+          [Service]
+          Type=simple
+          ExecStart=/usr/local/bin/gunicorn --bind 0.0.0.0:5000 app:app
+          WorkingDirectory=/opt/inventory-backend/src
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start the backend service
+      systemd:
+        name: inventory-backend.service
+        enabled: yes
+        state: started

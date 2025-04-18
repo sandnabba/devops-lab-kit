@@ -24,7 +24,8 @@ These same components could be used to transition from a local development host,
     *   [Monitoring and Metrics](#monitoring-and-metrics)
 4.  [Backend](#backend)
 5.  [Frontend](#frontend)
-6.  [Todo](#todo)
+6.  [Infrastructure](#infrastructure)
+7.  [Todo](#todo)
 
 ## Background
 
@@ -204,10 +205,20 @@ The API base URL is customisable to demonstrate how a user could run the web ser
 
 You can find more details in the [Frontend README](./frontend/README.md).
 
+## Infrastructure
+
+The `infrastructure/` directory contains configurations for setting up cloud resources, primarily using Terraform.
+
+*   **`infrastructure/azure/`**: Contains the main Terraform configuration for Azure resources.
+    *   Defines the core provider setup, resource group.
+    *   Calls child modules for specific resources like virtual machines.
+    *   **Run `terraform init/plan/apply` from this directory** to manage the Azure setup.
+*   **`infrastructure/azure/virtual-machine/`**: A child module defining the resources for a basic Ubuntu VM with network components (VNet, Subnet, NIC, Public IP, NSG). It receives configuration like resource group name and location from the parent `azure` module.
+
 ## Todo
 
 *   Made the backend API return the hostname
     *   Will give a much better understanding of load balancing when scaling up horizontaly.
 *   Make log level configurable - implement proper logging instead of prints.
-*   ~~Add Docker health checks and /health check endpoint in backend API~~ (Added /healthcheck endpoint)
 *   Make multi stage build for frontend container
+*   Add Azure load balancer
