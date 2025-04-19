@@ -1,0 +1,2 @@
+# This file can be empty or removed as the module should inherit provider configuration from the parent.
+# No provider configuration needed in child modules when they use the same provider as the parent.
