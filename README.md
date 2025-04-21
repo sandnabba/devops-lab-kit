@@ -8,6 +8,8 @@ These same components could be used to transition from a local development host,
 |-|-|
 | <a href="./docs/devops-lab-kit-stage-1.png" target="_blank"> <img src="./docs/devops-lab-kit-stage-1.png" alt="DevOps Lab Kit Stage 1 Diagram" width="300"> </a> | <a href="./docs/devops-lab-kit-cloud.png" target="_blank"> <img src="./docs/devops-lab-kit-cloud.png" alt="DevOps Lab Kit Cloud Diagram" width="300"> </a> |
 
+The backend API is also well-suited for hosted application environments (e.g., Azure App Service, Heroku).
+
 ## Table of Contents
 
 1.  [Overview](#overview)
@@ -187,9 +189,11 @@ Beyond the deployment scenarios, this project serves as a foundation for explori
 
 ## Backend
 
-The backend is a Python Flask application. It provides a REST API for the web application, that can also be used on its own.
+The backend is a Python Flask application that provides a REST API for the web application. The API can also be used independently.
 
-It uses a local SQLite database by default, but can be configured to use a MySQL database on another host.
+By default, it uses a local SQLite database, but it can be configured to connect to a MySQL database on another host.
+
+The backend can run in a Python virtual environment, inside a container, or be deployed to hosted application services.
 
 You can find more details in the [Backend README](./backend/README.md).
 
@@ -217,8 +221,12 @@ The `infrastructure/` directory contains configurations for setting up cloud res
 
 ## Todo
 
+Growing list of ToDo items that will most likely never be completed:
+
 *   Made the backend API return the hostname
     *   Will give a much better understanding of load balancing when scaling up horizontaly.
 *   Make log level configurable - implement proper logging instead of prints.
 *   Make multi stage build for frontend container
-*   Add Azure load balancer
+*   Add Azure load balancer in Terraform
+*   Document how this app can be used for exploring cloud services. (Azure Exams etc)
+*   Add a /logging endpoint, that can be used to generate log messages or different severity
