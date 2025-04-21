@@ -59,3 +59,9 @@ variable "admin_ssh_key_public" {
   sensitive   = true
   # No default - value must be provided
 }
+
+variable "dns_zone_name" {
+  description = "The name of the DNS zone."
+  type        = string
+  default     = "example.com"
+}
