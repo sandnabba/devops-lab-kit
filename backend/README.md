@@ -15,7 +15,7 @@ Beyond inventory management, the API includes endpoints for retrieving service e
         *   [Production Container](#production-container)
         *   [Development Container (with Live Reload)](#development-container-with-live-reload)
     *   [Python Virtual Environment](#python-virtual-environment)
-    *   [Hosted Application Services (Azure Apps)](#hosted-application-services-azure-apps)
+    *   [Azure deployment](#azure-deployment)
 
 ## Features
 
@@ -43,13 +43,17 @@ The application can be configured using environment variables. Below are the key
 
 ## API Endpoints
 
-| Method | Endpoint             | Description                               | Payload                            |
-| :----- | :------------------- | :---------------------------------------- | :--------------------------------- |
-| `GET`  | `/inventory/`        | Retrieves all inventory items.            | None                               |
-| `POST` | `/inventory/`        | Adds a new inventory item.                | JSON with `name`, `quantity`, `price` |
-| `PUT`  | `/inventory/<item_id>` | Updates an inventory item by ID.          | JSON with fields to update         |
-| `DELETE`| `/inventory/<item_id>` | Deletes an inventory item by ID.          | None                               |
-| `GET`  | `/healthcheck`       | Checks app status and database connectivity. | None                               |
+| Method   | Endpoint             | Description                                         | Payload                                 |
+| :------- | :------------------- | :--------------------------------------------------| :--------------------------------------- |
+| `GET`    | `/database/`         | Retrieves all inventory items.                      | None                                    |
+| `POST`   | `/database/`         | Adds a new inventory item.                          | JSON with `name`, `quantity`, `price`   |
+| `PUT`    | `/database/<item_id>`| Updates an inventory item by ID.                    | JSON with fields to update              |
+| `DELETE` | `/database/<item_id>`| Deletes an inventory item by ID.                    | None                                    |
+| `GET`    | `/healthcheck`       | Checks app status and database connectivity.        | None                                    |
+| `GET`    | `/environment`       | Retrieves all environment variables.                | None                                    |
+| `GET`    | `/hello`             | Simple endpoint that responds with 'Hello, World!'. | None                                    |
+| `POST`   | `/log`               | Triggers a log message at a specified level.        | JSON with `level`, `message`            |
+| `POST`   | `/crash`             | Intentionally crashes the entire application.       | None                                    |
 
 ### Example: Adding an Item using `curl`
 
@@ -57,7 +61,7 @@ To add a new item named "Example Widget" with quantity 50 and price 19.95, you c
 
 ```bash
 curl -X POST \
-  http://localhost:5000/inventory/ \
+  http://localhost:5000/database/ \
   -H 'Content-Type: application/json' \
   -d '{
     "name": "Example Widget",
@@ -76,6 +80,41 @@ curl -X POST \
   "quantity": 50
 }
 ```
+
+### Example: Logging a Message
+
+To log a message at the `warning` level:
+
+```bash
+curl -X POST \
+  http://localhost:5000/log \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "level": "warning",
+    "message": "This is a test warning from the API"
+  }'
+```
+
+**Expected Response (200 OK):**
+
+```json
+{
+  "status": "logged",
+  "level": "warning",
+  "message": "This is a test warning from the API"
+}
+```
+
+### Example: Crashing the Application
+
+To intentionally crash the entire application (for testing purposes):
+
+```bash
+curl -X POST http://localhost:5000/crash
+```
+
+**Note:**  
+This will terminate the whole Gunicorn process (all workers and master). Use with caution.
 
 ## Deployment options 
 
@@ -132,13 +171,25 @@ If you prefer not to use Docker, you can set up a local Python environment. Inst
 
 *   **[Local Python Environment Setup](./docs/local-setup.md)**
 
-### Hosted Application Services (Azure Apps)
+### Azure deployment
 
-The backend API is suitable for running in a hosted application environment.
+The backend API can be deployed to Azure using either **App Services** or **Azure Container Instances**.
 
-A `Makefile` is provided with targets to deploy this service to Azure App Services:
-* `zip`: Creates the application .zip file.
-* `setup`: Initializes the Azure services.
-* `deploy`: Deploys the zip file to the app service.
-* `logs`: Tails Azure logs.
-* `ssh`: Opens an SSH shell in the application container.
+A `Makefile` is provided with targets for both deployment options:
+
+#### Azure App Services
+
+- `zip`: Creates the application .zip file for deployment.
+- `setup`: Initializes the Azure App Service resources.
+- `deploy`: Deploys the zip file to the App Service.
+- `logs`: Tails Azure App Service logs.
+- `ssh`: Opens an SSH shell in the App Service container.
+
+#### Azure Container Instances
+
+- `acr-image`: Builds and pushes a Docker image to Azure Container Registry.
+- `container-deploy`: Deploys the container image to Azure Container Instances.  
+  *Note: You must provide `REGISTRY_USERNAME` and `REGISTRY_PASSWORD` as environment variables when running this target to avoid hardcoding secrets.*
+- `container-show`: Lists running container instances.
+
+Refer to the `Makefile` for usage details and required environment variables.
