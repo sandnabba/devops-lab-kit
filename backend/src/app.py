@@ -158,10 +158,44 @@ def hello():
     """Simple endpoint that responds with 'Hello, World!'."""
     return jsonify({"message": "Hello, World!"}), 200
 
+@app.route('/log', methods=['POST'])
+def trigger_log():
+    """
+    Triggers a log message at the specified level.
+    Expects JSON: { "level": "info|warning|error|debug|critical", "message": "Your log message" }
+    """
+    data = request.json
+    if not data or 'level' not in data or 'message' not in data:
+        return jsonify({"error": "Missing 'level' or 'message' in request body"}), 400
+
+    level = data['level'].lower()
+    message = data['message']
+
+    log_func = {
+        "debug": app.logger.debug,
+        "info": app.logger.info,
+        "warning": app.logger.warning,
+        "error": app.logger.error,
+        "critical": app.logger.critical
+    }.get(level)
+
+    if not log_func:
+        return jsonify({"error": f"Invalid log level '{level}'. Valid levels: debug, info, warning, error, critical."}), 400
+
+    log_func(message)
+    return jsonify({"status": "logged", "level": level, "message": message}), 200
+
+@app.route('/crash', methods=['POST'])
+def crash_app():
+    """Endpoint to intentionally crash the entire application (for testing purposes)."""
+    import os, signal
+    os.kill(os.getppid(), signal.SIGTERM)
+    return "Crashing...", 500  # This line likely won't be reached
+
 @app.route('/', methods=['GET'])
 def welcome():
     """Returns a welcome page with a summary of the API endpoints."""
-    welcome_text = """Welcome to the Inventory Management API!
+    welcome_text = """Welcome to the DevOps Lab Kit API!
 
 Available endpoints:
   GET    /inventory/               - Retrieve all inventory items.
@@ -171,6 +205,8 @@ Available endpoints:
   GET    /healthcheck              - Check the health of the application.
   GET    /environment              - Retrieve environment variables.
   GET    /hello                    - Simple endpoint that responds with 'Hello, World!'.
+  POST   /log                      - Log a message at a specified level.
+  POST   /crash                    - Intentionally crash the application (for testing purposes).
 """
     return Response(welcome_text, mimetype='text/plain')
 
