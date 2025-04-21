@@ -1,37 +1,39 @@
 # Backend API Service
 
-This directory contains the backend API service for the Inventory Management System.
+The backend is part of a DevOps Lab Kit designed for hands-on learning and experimentation. It provides a simple RESTful API built with Python and Flask, supporting CRUD (Create, Read, Update, Delete) operations for inventory items stored in a database.
+
+Beyond inventory management, the API includes endpoints for retrieving service environment details, performing health checks, and a basic hello endpoint. These features are useful for exploring deployment strategies, environment configuration, and service monitoring in various DevOps scenarios.
 
 ## Table of Contents
 
-1.  [Overview](#overview)
-2.  [Features](#features)
-3.  [Running Locally (Docker Recommended)](#running-locally-docker-recommended)
-4.  [Database](#database)
-5.  [API Endpoints](#api-endpoints)
-6.  [Docker](#docker)
-    *   [Production Container](#production-container)
-    *   [Development Container (with Live Reload)](#development-container-with-live-reload)
-7.  [Local Development (Alternative)](#local-development-alternative)
-
-## Overview
-
-The backend is a simple RESTful API built with Python using the Flask framework. It handles CRUD (Create, Read, Update, Delete) operations for inventory items and stores data in a database.
+1.  [Features](#features)
+2.  [Configuration](#configuration)
+3.  [Database](#database)
+4.  [API Endpoints](#api-endpoints)
+5.  [Deployment options](#deployment-options)
+    *   [Using Docker container (Recommended)](#using-docker-container-recommended)
+        *   [Production Container](#production-container)
+        *   [Development Container (with Live Reload)](#development-container-with-live-reload)
+    *   [Python Virtual Environment](#python-virtual-environment)
+    *   [Hosted Application Services (Azure Apps)](#hosted-application-services-azure-apps)
 
 ## Features
 
-*   **Flask Framework**: Lightweight and flexible Python web framework.
-*   **Flask-SQLAlchemy**: Provides ORM capabilities for database interaction.
-*   **SQLite Database**: Simple file-based database, stored in the `instance/` directory.
-*   **Flask-CORS**: Handles Cross-Origin Resource Sharing for frontend integration.
+* **Flask Framework**: Lightweight and flexible Python web framework.
+  * **Flask-SQLAlchemy**: Provides ORM capabilities for database interaction. Uses SQLite (a simple file-based database stored in the `instance/` directory) by default. Transitioning to other databases like MySQL or PostgreSQL is straightforward with minimal code changes.
+  * **Flask-CORS**: Handles Cross-Origin Resource Sharing for frontend integration.
 *   **RESTful API**: Provides standard HTTP endpoints for managing inventory items.
 *   **Docker Support**: Includes a multi-stage Dockerfile for development and production builds.
 
-## Running Locally (Docker Recommended)
+## Configuration
 
-The recommended way to run the backend locally for development is using the [Docker Development Container](#development-container-with-live-reload). This provides a consistent environment and includes live reloading.
+The application can be configured using environment variables. Below are the key configuration options:
 
-See the [Docker](#docker) section below for instructions on building and running the development container.
+| Environment Variable         | Default Value                          | Description                                                                 |
+|------------------------------|----------------------------------------|-----------------------------------------------------------------------------|
+| `SQLALCHEMY_DATABASE_URI`    | `sqlite:///instance/database.db`      | The database connection string. Defaults to a local SQLite database.       |
+| `PORT`                       | `5000`                                | The port the application listens on. Azure App Services overrides this.    |
+
 
 ## Database
 
@@ -75,7 +77,9 @@ curl -X POST \
 }
 ```
 
-## Docker
+## Deployment options 
+
+### Using Docker container (Recommended)
 
 You can build and run the backend service using Docker with the provided multi-stage `Dockerfile`.
 
@@ -122,8 +126,19 @@ This is the **recommended method for local development**. It uses the `dev` stag
     *   `-v backend-dev-db-data:/app/instance`: Creates a named volume `backend-dev-db-data` to store the SQLite database (`instance/database.db`) persistently, separate from the container lifecycle.
     *   The API will be available at `http://localhost:5000`. Changes to Python files in your local `src` directory should cause the server inside the container to automatically restart.
 
-## Local Development (Alternative)
+### Python Virtual Environment
 
 If you prefer not to use Docker, you can set up a local Python environment. Instructions for this method can be found here:
 
 *   **[Local Python Environment Setup](./docs/local-setup.md)**
+
+### Hosted Application Services (Azure Apps)
+
+The backend API is suitable for running in a hosted application environment.
+
+A `Makefile` is provided with targets to deploy this service to Azure App Services:
+* `zip`: Creates the application .zip file.
+* `setup`: Initializes the Azure services.
+* `deploy`: Deploys the zip file to the app service.
+* `logs`: Tails Azure logs.
+* `ssh`: Opens an SSH shell in the application container.

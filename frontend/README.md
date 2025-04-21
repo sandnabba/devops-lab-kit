@@ -9,6 +9,7 @@ It's a `React` application written in `TypeScript`, created with `Vite` and `Nod
 ## Table of Contents
 
 - [Overview](#overview)
+- [Deployment](#deployment)
 - [Development and Build](#development-and-build)
     - [Using Docker (Recommended)](#using-docker-recommended)
         - [Running the Development Server](#running-the-development-server)
@@ -28,6 +29,14 @@ The frontend provides a simple user interface for the inventory application, int
 The API base URL is configurable within the UI. This allows demonstrating scenarios like running the frontend and backend on different hosts, and dealing with potential CORS or "Mixed Content" issues.
 
 **Remember:** The primary purpose of this application is to serve as a practical example for learning DevOps principles and deployment strategies, NOT to be a feature-complete or robust application. It's generally very basic, lacks automated testing, and has minimal security considerations.
+
+## Deployment
+
+As all output is just static HTML and JavaScript, this application could be used to explore several different deployment techniques:
+
+* Manual local deployment: Set up a web server on your local computer to serve the content (also see development and build).
+* Container app deployment behind a traditional load balancer.
+* Cloud deployment (e.g., Azure App Services).
 
 ## Development and Build
 
