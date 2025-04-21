@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 # Import db instance, init_db function, and Inventory model from database.py
 from database import db, init_db, Inventory
 from flask_cors import CORS # Import CORS
@@ -109,7 +109,19 @@ def delete_item(item_id):
         app.logger.error(f"Error deleting item {item_id}: {e}")
         return jsonify({"error": "Failed to delete item"}), 500
 
-# --- Health Check Endpoint ---
+@app.route('/environment', methods=['GET'])
+def get_environment():
+    """Returns all environment variables available to the process."""
+    print("Received GET request for environment.")
+    try:
+        environment = dict(os.environ)  # Get all environment variables as a dictionary
+        print(f"Environment details: {environment}")
+        return jsonify(environment), 200
+    except Exception as e:
+        print(f"Error fetching environment details: {e}")
+        app.logger.error(f"Error fetching environment details: {e}")
+        return jsonify({"error": "Failed to fetch environment details"}), 500
+
 @app.route('/healthcheck', methods=['GET'])
 def health_check():
     """Checks the health of the application, including database connectivity and table access."""
@@ -141,6 +153,27 @@ def health_check():
             "details": db_error
         }), 500
 
+@app.route('/hello', methods=['GET'])
+def hello():
+    """Simple endpoint that responds with 'Hello, World!'."""
+    return jsonify({"message": "Hello, World!"}), 200
+
+@app.route('/', methods=['GET'])
+def welcome():
+    """Returns a welcome page with a summary of the API endpoints."""
+    welcome_text = """Welcome to the Inventory Management API!
+
+Available endpoints:
+  GET    /inventory/               - Retrieve all inventory items.
+  POST   /inventory/               - Add a new inventory item.
+  PUT    /inventory/<item_id>      - Update an inventory item by ID.
+  DELETE /inventory/<item_id>      - Delete an inventory item by ID.
+  GET    /healthcheck              - Check the health of the application.
+  GET    /environment              - Retrieve environment variables.
+  GET    /hello                    - Simple endpoint that responds with 'Hello, World!'.
+"""
+    return Response(welcome_text, mimetype='text/plain')
+
 # --- Application Runner ---
 if __name__ == "__main__":
     print("Starting Flask application...")
@@ -150,4 +183,7 @@ if __name__ == "__main__":
         print("Database file exists.")
     else:
         print("Database file does not exist yet, should be created by SQLAlchemy.")
-    app.run(debug=True, host='0.0.0.0')
+    
+    # Use the PORT environment variable provided by Azure, default to 5000 if not set
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)
