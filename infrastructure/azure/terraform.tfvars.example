@@ -1,16 +1,18 @@
-# Example variables for the VM module
-# NOTE: These values should typically be passed from the parent module rather than set here
+# Example minimal variables for Azure infrastructure
 
-# Required parameters
-# resource_group_name = "your-resource-group"
-# location = "westeurope"
-# subnet_id = "/subscriptions/subscription-id/resourceGroups/rg-name/providers/Microsoft.Network/virtualNetworks/vnet-name/subnets/subnet-name"
-# admin_ssh_key_public = "ssh-rsa AAAA..."
+# ===========================
+# Required variables (set these for all environments)
+# ===========================
+# subscription_id      = "your-subscription-id"
+# resource_group_name  = "your-resource-group"
+# location             = "westeurope"
 
-# Optional parameters with defaults
-# vm_name = "devops-lab-vm"
-# vm_size = "Standard_B1s"
-# admin_username = "azureuser"
-# public_ip_name = "devops-lab-vm-pip"
-# nsg_name = "devops-lab-vm-nsg"
-# nic_name = "devops-lab-vm-nic"
+# ===========================
+# VM Module
+# ===========================
+# admin_ssh_key_public = "ssh-ed25519 AAAA..."
+
+# ===========================
+# DNS Module
+# ===========================
+# dns_zone_name = "example.yourdomain.com"
