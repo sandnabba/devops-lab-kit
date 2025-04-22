@@ -28,7 +28,7 @@ init_db(app)
 
 # --- Route Definitions ---
 # Routes remain largely the same, but ensure they use the imported 'db' and 'Inventory'
-@app.route('/inventory/', methods=['GET'])
+@app.route('/database/', methods=['GET'])
 def get_inventory():
     print("Received GET request to fetch inventory.")
     try:
@@ -41,7 +41,7 @@ def get_inventory():
         app.logger.error(f"Error fetching inventory: {e}")
         return jsonify({"error": "Failed to fetch inventory"}), 500
 
-@app.route('/inventory/', methods=['POST'])
+@app.route('/database/', methods=['POST'])
 def add_item():
     print("Received POST request to add item.")
     try:
@@ -62,7 +62,7 @@ def add_item():
         app.logger.error(f"Error adding item: {e}")
         return jsonify({"error": "Failed to add item"}), 500
 
-@app.route('/inventory/<int:item_id>', methods=['PUT'])
+@app.route('/database/<int:item_id>', methods=['PUT'])
 def update_item(item_id):
     print(f"Received PUT request for item ID: {item_id}")
     try:
@@ -89,7 +89,7 @@ def update_item(item_id):
         app.logger.error(f"Error updating item {item_id}: {e}")
         return jsonify({"error": "Failed to update item"}), 500
 
-@app.route('/inventory/<int:item_id>', methods=['DELETE'])
+@app.route('/database/<int:item_id>', methods=['DELETE'])
 def delete_item(item_id):
     print(f"Received DELETE request for item ID: {item_id}")
     try:
@@ -158,19 +158,55 @@ def hello():
     """Simple endpoint that responds with 'Hello, World!'."""
     return jsonify({"message": "Hello, World!"}), 200
 
+@app.route('/log', methods=['POST'])
+def trigger_log():
+    """
+    Triggers a log message at the specified level.
+    Expects JSON: { "level": "info|warning|error|debug|critical", "message": "Your log message" }
+    """
+    data = request.json
+    if not data or 'level' not in data or 'message' not in data:
+        return jsonify({"error": "Missing 'level' or 'message' in request body"}), 400
+
+    level = data['level'].lower()
+    message = data['message']
+
+    log_func = {
+        "debug": app.logger.debug,
+        "info": app.logger.info,
+        "warning": app.logger.warning,
+        "error": app.logger.error,
+        "critical": app.logger.critical
+    }.get(level)
+
+    if not log_func:
+        return jsonify({"error": f"Invalid log level '{level}'. Valid levels: debug, info, warning, error, critical."}), 400
+
+    log_func(message)
+    return jsonify({"status": "logged", "level": level, "message": message}), 200
+
+@app.route('/crash', methods=['POST'])
+def crash_app():
+    """Endpoint to intentionally crash the entire application (for testing purposes)."""
+    import os, signal
+    os.kill(os.getppid(), signal.SIGTERM)
+    return "Crashing...", 500  # This line likely won't be reached
+
 @app.route('/', methods=['GET'])
 def welcome():
     """Returns a welcome page with a summary of the API endpoints."""
-    welcome_text = """Welcome to the Inventory Management API!
+    welcome_text = """Welcome to the DevOps Lab Kit API!
 
 Available endpoints:
-  GET    /inventory/               - Retrieve all inventory items.
-  POST   /inventory/               - Add a new inventory item.
-  PUT    /inventory/<item_id>      - Update an inventory item by ID.
-  DELETE /inventory/<item_id>      - Delete an inventory item by ID.
+  GET    /database/                - Retrieve all inventory items.
+  POST   /database/                - Add a new inventory item.
+  PUT    /database/<item_id>       - Update an inventory item by ID.
+  DELETE /database/<item_id>       - Delete an inventory item by ID.
   GET    /healthcheck              - Check the health of the application.
   GET    /environment              - Retrieve environment variables.
   GET    /hello                    - Simple endpoint that responds with 'Hello, World!'.
+  POST   /log                      - Log a message at a specified level.
+  POST   /crash                    - Intentionally crash the application (for testing purposes).
 """
     return Response(welcome_text, mimetype='text/plain')
 
