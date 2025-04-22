@@ -1,6 +1,16 @@
-# Define variables
 ZIP_FILE = app.zip
 SOURCE_DIR = deployment
+ACR_REGISTRY_NAME = devopslabkitrgacr
+LOCATION ?= northeurope
+
+clean:
+	@echo "Cleaning up..."
+	rm -rf $(SOURCE_DIR) $(ZIP_FILE)
+	@echo "Cleaned up."
+
+###
+### Azure App Service Deployment
+###
 
 # Target to create the zip file
 zip:
@@ -27,3 +37,43 @@ logs:
 
 ssh:
 	az webapp ssh --resource-group devops-lab-kit-rg --name devops-lab-kit-backend
+
+###
+### Azure Container targets
+###
+
+build-acr-image:
+	az acr build --image devops-labkit/backend:latest --registry $(ACR_REGISTRY_NAME) .
+
+create-container-instance:
+	az container create --resource-group devops-lab-kit-rg \
+	--name devops-labkit-backend-container \
+	--image $(ACR_REGISTRY_NAME).azurecr.io/devops-labkit/backend:latest \
+	--ports 5000 --os-type Linux --cpu 1 --memory 1 \
+	--dns-name-label devopslabkit-backend-aci-demo --location $(LOCATION) \
+	--assign-identity \
+	--registry-login-server devopslabkitrgacr.azurecr.io \
+	--registry-username $(REGISTRY_USERNAME) \
+	--registry-password $(REGISTRY_PASSWORD)
+
+container-instance-show:
+	az container list --resource-group devops-lab-kit-rg --output table
+
+container-app-environment:
+	az containerapp env create \
+		--name devops-labkit-env \
+		--resource-group devops-lab-kit-rg \
+		--location $(LOCATION)
+
+container-app-create:
+	az containerapp create --name devops-labkit-backend-app \
+		--resource-group devops-lab-kit-rg \
+		--environment devops-labkit-env \
+		--image $(ACR_REGISTRY_NAME).azurecr.io/devops-labkit/backend:latest \
+		--target-port 5000 \
+		--ingress external \
+		--registry-server $(ACR_REGISTRY_NAME).azurecr.io \
+		--registry-username $(REGISTRY_USERNAME) \
+		--registry-password $(REGISTRY_PASSWORD) \
+		--cpu 1.0 --memory 2.0Gi \
+		--min-replicas 1 --max-replicas 1 \
