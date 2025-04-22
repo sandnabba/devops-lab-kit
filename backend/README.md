@@ -175,7 +175,9 @@ If you prefer not to use Docker, you can set up a local Python environment. Inst
 
 The backend API can be deployed to Azure using either **App Services** or **Azure Container Instances**.
 
-A `Makefile` is provided with targets for both deployment options:
+A `Makefile` is provided with targets for both deployment options, utilizing the `Azure CLI (az)` command.
+
+**Note:** For production environments, it is recommended to manage the app or container infrastructure using Terraform or another infrastructure-as-code platform.
 
 #### Azure App Services
 
