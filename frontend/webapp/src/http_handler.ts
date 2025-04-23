@@ -44,7 +44,7 @@ const handleApiResponse = async <T>(response: Response): Promise<T> => {
 export const fetchInventory = async (apiBaseUrl: string): Promise<InventoryItem[]> => {
   try {
     // Use the passed apiBaseUrl
-    const response = await fetch(`${apiBaseUrl}/inventory/`);
+    const response = await fetch(`${apiBaseUrl}/database/`);
     const data = await handleApiResponse<InventoryItem[]>(response);
     console.log("Fetched inventory:", data);
     return data || [];
@@ -59,7 +59,7 @@ export const fetchInventory = async (apiBaseUrl: string): Promise<InventoryItem[
 export const addItem = async (apiBaseUrl: string, itemData: Omit<InventoryItem, 'id'>): Promise<InventoryItem> => {
   try {
     // Use the passed apiBaseUrl
-    const response = await fetch(`${apiBaseUrl}/inventory/`, {
+    const response = await fetch(`${apiBaseUrl}/database/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -83,7 +83,7 @@ export const addItem = async (apiBaseUrl: string, itemData: Omit<InventoryItem, 
 export const updateItem = async (apiBaseUrl: string, itemId: number, itemData: Partial<Omit<InventoryItem, 'id'>>): Promise<InventoryItem> => {
     try {
         // Use the passed apiBaseUrl
-        const response = await fetch(`${apiBaseUrl}/inventory/${itemId}`, {
+        const response = await fetch(`${apiBaseUrl}/database/${itemId}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json",
@@ -107,7 +107,7 @@ export const updateItem = async (apiBaseUrl: string, itemId: number, itemData: P
 export const deleteItem = async (apiBaseUrl: string, itemId: number): Promise<void> => {
     try {
         // Use the passed apiBaseUrl
-        const response = await fetch(`${apiBaseUrl}/inventory/${itemId}`, {
+        const response = await fetch(`${apiBaseUrl}/database/${itemId}`, {
             method: "DELETE",
         });
         await handleApiResponse<void>(response);

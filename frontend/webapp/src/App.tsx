@@ -6,6 +6,7 @@ import { fetchInventory, deleteItem, addItem, updateItem, InventoryItem } from '
 import ItemFormModal from './AddItemModal'; // Use the potentially renamed component
 // Import the modal CSS
 import './Modal.css';
+import React from 'react';
 
 function App() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -16,6 +17,16 @@ function App() {
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   // State for the API Base URL
   const [apiBaseUrl, setApiBaseUrl] = useState<string>('/api'); // Default to relative /api
+
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [pasteText, setPasteText] = useState('');
+  const [pasteResult, setPasteResult] = useState<{ url: string; expires_at: string } | null>(null);
+  const [pasteLoading, setPasteLoading] = useState(false);
+  const [pasteError, setPasteError] = useState<string | null>(null);
+
+  const [environment, setEnvironment] = useState<any | null>(null);
+  const [envLoading, setEnvLoading] = useState(false);
+  const [envError, setEnvError] = useState<string | null>(null);
 
   const loadInventory = async () => {
     setError(null); // Clear previous errors
@@ -88,13 +99,71 @@ function App() {
     }
   };
 
+  // Pastebin handlers
+  const openPasteModal = () => {
+    setPasteText('');
+    setPasteResult(null);
+    setPasteError(null);
+    setShowPasteModal(true);
+  };
+  const closePasteModal = () => {
+    setShowPasteModal(false);
+    setPasteText('');
+    setPasteResult(null);
+    setPasteError(null);
+    setPasteLoading(false);
+  };
+  const handlePasteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasteError(null);
+    setPasteLoading(true);
+    setPasteResult(null);
+    try {
+      const resp = await fetch(`${apiBaseUrl}/pastebin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: pasteText }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || resp.statusText);
+      }
+      const data = await resp.json();
+      setPasteResult({ url: data.url, expires_at: data.expires_at });
+    } catch (err) {
+      setPasteError(err instanceof Error ? err.message : 'Failed to create paste.');
+    } finally {
+      setPasteLoading(false);
+    }
+  };
+
+  // Handler for fetching environment info
+  const handleFetchEnvironment = async () => {
+    setEnvLoading(true);
+    setEnvError(null);
+    setEnvironment(null);
+    try {
+      const resp = await fetch(`${apiBaseUrl}/environment`);
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({}));
+        throw new Error(err.error || resp.statusText);
+      }
+      const data = await resp.json();
+      setEnvironment(data);
+    } catch (err) {
+      setEnvError(err instanceof Error ? err.message : 'Failed to fetch environment.');
+    } finally {
+      setEnvLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadInventory();
   }, [apiBaseUrl]);
 
   return (
     <div>
-      <h1>Inventory List</h1>
+      <h1>DevOps LabKit</h1>
 
       {/* API URL Configuration */}
       <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
@@ -110,11 +179,42 @@ function App() {
         <p style={{ fontSize: '0.8em', color: '#555', marginTop: '5px' }}>
           (Inventory will reload automatically when URL changes or on refresh/CRUD actions)
         </p>
+        {/* Environment Button */}
+        <button
+          onClick={handleFetchEnvironment}
+          style={{ marginLeft: '10px' }}
+          disabled={envLoading}
+        >
+          {envLoading ? 'Loading Environment...' : 'Show Environment'}
+        </button>
       </div>
+      {/* Environment Output */}
+      {envError && <div className="error-message">{envError}</div>}
+      {environment && (
+        <pre
+          style={{
+            background: '#f6f8fa',
+            border: '1px solid #e1e4e8',
+            borderRadius: '4px',
+            padding: '12px',
+            marginBottom: '20px',
+            fontSize: '0.95em',
+            overflowX: 'auto',
+            textAlign: 'left'
+          }}
+        >
+          {JSON.stringify(environment, null, 2)}
+        </pre>
+      )}
 
       {/* Use handler to open modal for adding */}
       <button onClick={handleOpenAddModal} className="add-item-button">
         Add New Item
+      </button>
+
+      {/* Pastebin Button */}
+      <button onClick={openPasteModal} style={{ marginBottom: '20px', marginLeft: '10px' }}>
+        New Pastebin
       </button>
 
       {/* Render the modal */}
@@ -124,6 +224,51 @@ function App() {
         onSubmit={handleSaveItem}
         initialData={editingItem}
       />
+
+      {/* Pastebin Modal */}
+      {showPasteModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <h2>New Pastebin</h2>
+            <form onSubmit={handlePasteSubmit}>
+              <div className="form-group">
+                <label htmlFor="pasteText">Paste Text:</label>
+                <textarea
+                  id="pasteText"
+                  value={pasteText}
+                  onChange={e => setPasteText(e.target.value)}
+                  rows={6}
+                  style={{ width: '100%' }}
+                  required
+                  disabled={pasteLoading}
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="submit" disabled={pasteLoading || !pasteText}>
+                  {pasteLoading ? 'Submitting...' : 'Submit'}
+                </button>
+                <button type="button" onClick={closePasteModal} disabled={pasteLoading}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+            {pasteError && <p className="error-message">{pasteError}</p>}
+            {pasteResult && (
+              <div style={{ marginTop: '15px', wordBreak: 'break-all' }}>
+                <strong>Paste URL:</strong>
+                <div>
+                  <a href={pasteResult.url} target="_blank" rel="noopener noreferrer">
+                    {pasteResult.url}
+                  </a>
+                </div>
+                <div style={{ fontSize: '0.9em', color: '#555' }}>
+                  Expires at: {pasteResult.expires_at}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Inventory Table */}
       {loading && <p>Loading inventory...</p>}
