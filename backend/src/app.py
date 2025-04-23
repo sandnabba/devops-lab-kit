@@ -229,6 +229,8 @@ def pastebin():
 
         # Upload the blob
         blob_client = container_client.get_blob_client(blob_name)
+
+        # Set content type to "text/plain" so files can be opened in a browser
         blob_client.upload_blob(text, overwrite=True, content_type="text/plain")
 
         # Since container access type is 'blob', blobs are publicly readable.
