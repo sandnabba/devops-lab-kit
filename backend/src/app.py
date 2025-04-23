@@ -5,6 +5,11 @@ from database import db, init_db, Inventory
 from flask_cors import CORS # Import CORS
 # Import text for raw SQL execution in health check
 from sqlalchemy import text
+from datetime import datetime, timedelta
+import uuid
+
+# Add Azure Blob Storage imports
+from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
 
 # --- Configuration ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -192,6 +197,51 @@ def crash_app():
     os.kill(os.getppid(), signal.SIGTERM)
     return "Crashing...", 500  # This line likely won't be reached
 
+@app.route('/pastebin', methods=['POST'])
+def pastebin():
+    """
+    Accepts a text string, uploads it to Azure Blob Storage with a 24h auto-delete policy,
+    and returns the blob URL.
+    Expects JSON: { "text": "your text here" }
+    """
+    # Get config from environment variables
+    AZURE_STORAGE_CONNECTION_STRING = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
+    AZURE_STORAGE_CONTAINER = os.environ.get("AZURE_STORAGE_CONTAINER", "pastebin")
+
+    if not AZURE_STORAGE_CONNECTION_STRING:
+        return jsonify({"error": "Azure Storage connection string not configured"}), 500
+
+    data = request.get_json()
+    if not data or "text" not in data:
+        return jsonify({"error": "Missing 'text' in request body"}), 400
+
+    text = data["text"]
+    blob_name = f"pastebin-{uuid.uuid4().hex}.txt"
+
+    try:
+        # Create container if it doesn't exist
+        blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
+        container_client = blob_service_client.get_container_client(AZURE_STORAGE_CONTAINER)
+        try:
+            container_client.create_container()
+        except Exception:
+            pass  # Ignore if already exists
+
+        # Upload the blob
+        blob_client = container_client.get_blob_client(blob_name)
+        blob_client.upload_blob(text, overwrite=True, content_type="text/plain")
+
+        # Since container access type is 'blob', blobs are publicly readable.
+        # Construct the public blob URL directly.
+        blob_url = f"https://{blob_service_client.account_name}.blob.core.windows.net/{AZURE_STORAGE_CONTAINER}/{blob_name}"
+
+        # Inform the user that the blob will be deleted after 24h (if lifecycle policy is set in Azure)
+        expiry = datetime.utcnow() + timedelta(hours=24)
+        return jsonify({"url": blob_url, "expires_at": expiry.isoformat() + "Z"}), 201
+    except Exception as e:
+        app.logger.error(f"Error uploading to pastebin: {e}")
+        return jsonify({"error": f"Failed to upload to pastebin: {str(e)}"}), 500
+
 @app.route('/', methods=['GET'])
 def welcome():
     """Returns a welcome page with a summary of the API endpoints."""
@@ -207,6 +257,7 @@ Available endpoints:
   GET    /hello                    - Simple endpoint that responds with 'Hello, World!'.
   POST   /log                      - Log a message at a specified level.
   POST   /crash                    - Intentionally crash the application (for testing purposes).
+  POST   /pastebin                 - Upload text to Azure Blob Storage with a 24h auto-delete policy.
 """
     return Response(welcome_text, mimetype='text/plain')
 
