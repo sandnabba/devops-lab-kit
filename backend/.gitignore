@@ -1,6 +1,7 @@
 # Local files
 app.zip
 deployment
+Docker.env
 
 # Python virtual environment
 venv/

@@ -4,20 +4,21 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000; /* Ensure it's on top */
 }
 
 .modal-content {
-  background-color: white;
-  padding: 20px 30px;
+  background: #fff;
+  padding: 2em;
   border-radius: 8px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  min-width: 300px;
   max-width: 500px;
+  width: 100%;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+  position: relative;
 }
 
 .modal-content h2 {
@@ -27,7 +28,7 @@
 }
 
 .form-group {
-  margin-bottom: 15px;
+  margin-bottom: 1em;
 }
 
 .form-group label {
@@ -45,10 +46,10 @@
 }
 
 .modal-actions {
-  margin-top: 20px;
   display: flex;
+  gap: 1em;
+  margin-top: 1em;
   justify-content: flex-end; /* Align buttons to the right */
-  gap: 10px; /* Space between buttons */
 }
 
 .modal-actions button {
@@ -74,8 +75,8 @@
 }
 
 .error-message {
-    color: red;
-    font-size: 0.9em;
-    margin-top: 10px;
-    text-align: center;
+  color: #dc3545;
+  margin-top: 0.5em;
+  font-size: 0.9em;
+  text-align: center;
 }

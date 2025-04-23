@@ -54,6 +54,7 @@ The application can be configured using environment variables. Below are the key
 | `GET`    | `/hello`             | Simple endpoint that responds with 'Hello, World!'. | None                                    |
 | `POST`   | `/log`               | Triggers a log message at a specified level.        | JSON with `level`, `message`            |
 | `POST`   | `/crash`             | Intentionally crashes the entire application.       | None                                    |
+| `POST`   | `/pastebin`          | Uploads text to Azure Blob Storage and returns a URL (expires in 24h). | JSON with `text` |
 
 ### Example: Adding an Item using `curl`
 
@@ -116,6 +117,30 @@ curl -X POST http://localhost:5000/crash
 **Note:**  
 This will terminate the whole Gunicorn process (all workers and master). Use with caution.
 
+### Example: Uploading Text to Pastebin (Azure Blob Storage)
+
+To upload a text snippet and get a temporary URL (valid for 24 hours):
+
+```bash
+curl -X POST \
+  http://localhost:5000/pastebin \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "text": "This is a test paste for Azure Blob Storage."
+  }'
+```
+
+**Expected Response (201 Created):**
+
+```json
+{
+  "url": "https://<your-storage-account>.blob.core.windows.net/pastebin/pastebin-<uuid>.txt?<sas-token>",
+  "expires_at": "2024-05-01T12:34:56.789012Z"
+}
+```
+
+You can use the returned `url` to access the uploaded text until the expiry time.
+
 ## Deployment options 
 
 ### Using Docker container (Recommended)
@@ -152,18 +177,38 @@ This is the **recommended method for local development**. It uses the `dev` stag
     ```bash
     # Mount the local 'src' directory into the container's '/app' directory
     # Mount a volume for the 'instance' directory to persist the database
+    # Load environment variables from Docker.env file
     docker run -it --rm \
+      --env-file Docker.env \
       -p 5000:5000 \
       -v $(pwd)/src:/app \
       -v backend-dev-db-data:/app/instance \
       --name backend-dev-container \
       inventory-backend-dev
     ```
+    *   `--env-file Docker.env`: Loads environment variables from a local `Docker.env` file (see below).
     *   `-it`: Runs the container interactively so you can see logs and stop with Ctrl+C.
     *   `--rm`: Automatically removes the container when it exits.
     *   `-v $(pwd)/src:/app`: Mounts your local `src` folder into `/app` in the container. Changes you make locally will trigger `gunicorn` to reload. **Important:** This mount overlays the code copied during the image build.
     *   `-v backend-dev-db-data:/app/instance`: Creates a named volume `backend-dev-db-data` to store the SQLite database (`instance/database.db`) persistently, separate from the container lifecycle.
     *   The API will be available at `http://localhost:5000`. Changes to Python files in your local `src` directory should cause the server inside the container to automatically restart.
+
+#### Using a `Docker.env` file for local development
+
+For local Docker development, you can store all required environment variables in a `Docker.env` file in the backend directory. This file is loaded automatically by Docker when you use the `--env-file Docker.env` flag.
+
+Example `Docker.env` file:
+
+```
+# Docker.env
+PORT=5000
+SQLALCHEMY_DATABASE_URI=sqlite:///instance/database.db
+AZURE_STORAGE_CONNECTION_STRING=your-azure-connection-string
+AZURE_STORAGE_CONTAINER=pastebin
+```
+
+**Note:**  
+Never commit your `Docker.env` file to version control if it contains secrets.
 
 ### Python Virtual Environment
 

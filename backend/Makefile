@@ -8,6 +8,28 @@ clean:
 	rm -rf $(SOURCE_DIR) $(ZIP_FILE)
 	@echo "Cleaned up."
 
+#
+# Container targets
+#
+
+# Create the devopslabkit network if it doesn't exist
+docker-network:
+	docker network inspect devopslabkit >/dev/null 2>&1 || docker network create devopslabkit
+
+build-dev-container:
+	docker build --target dev -t inventory-backend-dev .
+
+run-dev-container: docker-network
+	docker run -it --rm \
+		--env-file Docker.env \
+		--network devopslabkit \
+		-p 5000:5000 \
+		-v $(PWD)/src:/app \
+		-v backend-dev-db-data:/app/instance \
+		--name backend-dev-container \
+		inventory-backend-dev
+
+
 ###
 ### Azure App Service Deployment
 ###
