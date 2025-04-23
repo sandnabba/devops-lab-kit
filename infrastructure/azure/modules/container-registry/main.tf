@@ -43,6 +43,6 @@ resource "azurerm_container_registry" "acr" {
   tags = var.tags
 
   lifecycle {
-    ignore_changes = [tags["created_date"]]
+    ignore_changes = [tags]
   }
 }
