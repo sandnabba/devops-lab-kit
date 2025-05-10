@@ -4,8 +4,8 @@
 # Required variables (set these for all environments)
 # ===========================
 # subscription_id      = "your-subscription-id"
-# resource_group_name  = "your-resource-group"
-# location             = "westeurope"
+# location             = "Sweden Central"
+# identifier           = "my_name"
 
 # ===========================
 # VM Module

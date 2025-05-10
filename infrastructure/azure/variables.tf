@@ -1,13 +1,18 @@
+locals {
+  resource_group_name = "${var.identifier}-devops-lab-kit-rg"
+  vnet_name = "${var.identifier}-devops-lab-vnet"
+}
+
 variable "subscription_id" {
   description = "The Azure Subscription ID."
   type        = string
 }
 
-variable "resource_group_name" {
-  description = "The name of the main resource group for the lab kit."
-  type        = string
-  default     = "devops-lab-kit-rg"
+variable "identifier" {
+  description = "Unique identifier, e.g, your name"
+  type = string
 }
+
 
 variable "location" {
   description = "The Azure region where the main resource group will be created."
@@ -16,12 +21,6 @@ variable "location" {
 }
 
 # --- Network Variables ---
-variable "vnet_name" {
-  description = "The name of the Virtual Network."
-  type        = string
-  default     = "devops-lab-vnet"
-}
-
 variable "vnet_address_space" {
   description = "The address space for the Virtual Network."
   type        = list(string)

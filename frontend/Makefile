@@ -1,3 +1,6 @@
+# Source local.env
+-include ../local.env
+
 # Create the devopslabkit network if it doesn't exist
 docker-network:
 	docker network inspect devopslabkit >/dev/null 2>&1 || docker network create devopslabkit
