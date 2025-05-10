@@ -225,7 +225,5 @@ The `infrastructure/` directory contains configurations for setting up cloud res
 
 Growing list of ToDo items that will most likely never be completed:
 
-*   Make log level configurable - implement proper logging instead of prints.
 *   Make multi stage build for frontend container
 *   Add Azure load balancer in Terraform
-*   Add a /logging endpoint, that can be used to generate log messages or different severity
