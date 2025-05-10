@@ -15,7 +15,6 @@ Beyond inventory management, the API includes endpoints for retrieving service e
         *   [Production Container](#production-container)
         *   [Development Container (with Live Reload)](#development-container-with-live-reload)
     *   [Python Virtual Environment](#python-virtual-environment)
-    *   [Azure deployment](#azure-deployment)
 
 ## Features
 
@@ -32,7 +31,7 @@ The application can be configured using environment variables. Below are the key
 | Environment Variable         | Default Value                          | Description                                                                 |
 |------------------------------|----------------------------------------|-----------------------------------------------------------------------------|
 | `SQLALCHEMY_DATABASE_URI`    | `sqlite:///instance/database.db`      | The database connection string. Defaults to a local SQLite database.       |
-| `PORT`                       | `5000`                                | The port the application listens on. Azure App Services overrides this.    |
+| `PORT`                       | `5000`                                | The port the application listens on.                                       |
 
 
 ## Database
@@ -54,7 +53,9 @@ The application can be configured using environment variables. Below are the key
 | `GET`    | `/hello`             | Simple endpoint that responds with 'Hello, World!'. | None                                    |
 | `POST`   | `/log`               | Triggers a log message at a specified level.        | JSON with `level`, `message`            |
 | `POST`   | `/crash`             | Intentionally crashes the entire application.       | None                                    |
-| `POST`   | `/pastebin`          | Uploads text to Azure Blob Storage and returns a URL (expires in 24h). | JSON with `text` |
+| `POST`   | `/pastebin`          | Stores text in the database and returns a URL (expires in 24h). | JSON with `text` |
+| `GET`    | `/pastebin/<paste_id>` | Retrieves a paste by ID.                           | None                                    |
+| `POST`   | `/cleanup-pastes`    | Removes expired pastes from the database.            | None                                    |
 
 ### Example: Adding an Item using `curl`
 
@@ -117,7 +118,7 @@ curl -X POST http://localhost:5000/crash
 **Note:**  
 This will terminate the whole Gunicorn process (all workers and master). Use with caution.
 
-### Example: Uploading Text to Pastebin (Azure Blob Storage)
+### Example: Using the Pastebin Service
 
 To upload a text snippet and get a temporary URL (valid for 24 hours):
 
@@ -126,20 +127,41 @@ curl -X POST \
   http://localhost:5000/pastebin \
   -H 'Content-Type: application/json' \
   -d '{
-    "text": "This is a test paste for Azure Blob Storage."
+    "text": "This is a test paste stored in SQLite database."
   }'
 ```
 
-**Expected Response (201 Created):**
+The response will include a URL to access the paste and an expiration timestamp:
 
 ```json
 {
-  "url": "https://<your-storage-account>.blob.core.windows.net/pastebin/pastebin-<uuid>.txt?<sas-token>",
-  "expires_at": "2024-05-01T12:34:56.789012Z"
+  "url": "/api/pastebin/a1b2c3d4e5f6...",
+  "expires_at": "2025-05-11T12:34:56Z"
 }
 ```
 
-You can use the returned `url` to access the uploaded text until the expiry time.
+To retrieve a paste by its ID:
+
+```bash
+curl http://localhost:5000/pastebin/a1b2c3d4e5f6...
+```
+
+### Example: Cleaning Up Expired Pastes
+
+To manually clean up expired pastes from the database:
+
+```bash
+curl -X POST http://localhost:5000/cleanup-pastes
+```
+
+The response will indicate how many expired pastes were deleted:
+
+```json
+{
+  "status": "success",
+  "message": "Deleted 5 expired pastes"
+}
+```
 
 ## Deployment options 
 
@@ -203,8 +225,6 @@ Example `Docker.env` file:
 # Docker.env
 PORT=5000
 SQLALCHEMY_DATABASE_URI=sqlite:///instance/database.db
-AZURE_STORAGE_CONNECTION_STRING=your-azure-connection-string
-AZURE_STORAGE_CONTAINER=pastebin
 ```
 
 **Note:**  
@@ -215,28 +235,3 @@ Never commit your `Docker.env` file to version control if it contains secrets.
 If you prefer not to use Docker, you can set up a local Python environment. Instructions for this method can be found here:
 
 *   **[Local Python Environment Setup](./docs/local-setup.md)**
-
-### Azure deployment
-
-The backend API can be deployed to Azure using either **App Services** or **Azure Container Instances**.
-
-A `Makefile` is provided with targets for both deployment options, utilizing the `Azure CLI (az)` command.
-
-**Note:** For production environments, it is recommended to manage the app or container infrastructure using Terraform or another infrastructure-as-code platform.
-
-#### Azure App Services
-
-- `zip`: Creates the application .zip file for deployment.
-- `setup`: Initializes the Azure App Service resources.
-- `deploy`: Deploys the zip file to the App Service.
-- `logs`: Tails Azure App Service logs.
-- `ssh`: Opens an SSH shell in the App Service container.
-
-#### Azure Container Instances
-
-- `acr-image`: Builds and pushes a Docker image to Azure Container Registry.
-- `container-deploy`: Deploys the container image to Azure Container Instances.  
-  *Note: You must provide `REGISTRY_USERNAME` and `REGISTRY_PASSWORD` as environment variables when running this target to avoid hardcoding secrets.*
-- `container-show`: Lists running container instances.
-
-Refer to the `Makefile` for usage details and required environment variables.
