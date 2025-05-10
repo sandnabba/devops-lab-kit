@@ -14,8 +14,8 @@ Beyond inventory management, the API includes endpoints for retrieving service e
     *   [Using Docker container (Recommended)](#using-docker-container-recommended)
         *   [Production Container](#production-container)
         *   [Development Container (with Live Reload)](#development-container-with-live-reload)
-    *   [Azure Deployment](#azure-deployment)
     *   [Python Virtual Environment](#python-virtual-environment)
+    *   [Azure deployment](#azure-deployment)
 
 ## Features
 
@@ -233,72 +233,33 @@ LOG_LEVEL=INFO
 **Note:**  
 Never commit your `Docker.env` file to version control if it contains secrets.
 
-### Azure Deployment
-
-The backend API can be deployed to various Azure services. The project includes built-in support for Azure deployments through Makefile targets.
-
-#### Azure App Service
-
-Deploy the backend as an Azure App Service:
-
-1. **Create a zip file of the application**:
-   ```bash
-   make zip
-   ```
-
-2. **Set up the Azure resources** (only needed once):
-   ```bash
-   make setup
-   ```
-
-3. **Deploy the application**:
-   ```bash
-   make deploy
-   ```
-
-4. **View application logs**:
-   ```bash
-   make logs
-   ```
-
-5. **SSH into the App Service container**:
-   ```bash
-   make ssh
-   ```
-
-#### Azure Container Services
-
-Deploy the backend as a containerized application:
-
-1. **Build and push the Docker image to Azure Container Registry**:
-   ```bash
-   make build-acr-image
-   ```
-
-2. **Deploy to Azure Container Instances**:
-   ```bash
-   make create-container-instance
-   ```
-
-3. **View running container instances**:
-   ```bash
-   make container-instance-show
-   ```
-
-4. **Create a Container Apps environment**:
-   ```bash
-   make container-app-environment
-   ```
-
-5. **Deploy as a Container App**:
-   ```bash
-   make container-app-create
-   ```
-
-**Note**: These commands require proper Azure CLI configuration and relevant environment variables to be set in your `local.env` file. See `local.env.example` in the project root for reference.
-
 ### Python Virtual Environment
 
 If you prefer not to use Docker, you can set up a local Python environment. Instructions for this method can be found here:
 
 *   **[Local Python Environment Setup](./docs/local-setup.md)**
+
+### Azure deployment
+
+The backend API can be deployed to Azure using either **App Services** or **Azure Container Instances**.
+
+A `Makefile` is provided with targets for both deployment options, utilizing the `Azure CLI (az)` command.
+
+**Note:** For production environments, it is recommended to manage the app or container infrastructure using Terraform or another infrastructure-as-code platform.
+
+#### Azure App Services
+
+- `zip`: Creates the application .zip file for deployment.
+- `setup`: Initializes the Azure App Service resources.
+- `deploy`: Deploys the zip file to the App Service.
+- `logs`: Tails Azure App Service logs.
+- `ssh`: Opens an SSH shell in the App Service container.
+
+#### Azure Container Instances
+
+- `acr-image`: Builds and pushes a Docker image to Azure Container Registry.
+- `container-deploy`: Deploys the container image to Azure Container Instances.  
+  *Note: You must provide `REGISTRY_USERNAME` and `REGISTRY_PASSWORD` as environment variables when running this target to avoid hardcoding secrets.*
+- `container-show`: Lists running container instances.
+
+Refer to the `Makefile` for usage details and required environment variables.
