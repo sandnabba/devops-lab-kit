@@ -117,3 +117,26 @@ export const deleteItem = async (apiBaseUrl: string, itemId: number): Promise<vo
         throw error;
     }
 };
+
+// Create a log message
+export const createLogMessage = async (
+    apiBaseUrl: string,
+    level: string,
+    message: string
+): Promise<{ status: string; level: string; message: string; timestamp: string; destination: string }> => {
+    try {
+        const response = await fetch(`${apiBaseUrl}/log`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ level, message }),
+        });
+        const result = await handleApiResponse<{ status: string; level: string; message: string; timestamp: string; destination: string }>(response);
+        console.log("Log created:", result);
+        return result;
+    } catch (error) {
+        console.error("Error creating log:", error);
+        throw error;
+    }
+};
