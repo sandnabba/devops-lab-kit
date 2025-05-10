@@ -8,7 +8,9 @@ These same components could be used to transition from a local development host,
 |-|-|
 | <a href="./docs/devops-lab-kit-stage-1.png" target="_blank"> <img src="./docs/devops-lab-kit-stage-1.png" alt="DevOps Lab Kit Stage 1 Diagram" width="300"> </a> | <a href="./docs/devops-lab-kit-cloud.png" target="_blank"> <img src="./docs/devops-lab-kit-cloud.png" alt="DevOps Lab Kit Cloud Diagram" width="300"> </a> |
 
-The backend API is also well-suited for hosted application environments (e.g., Azure App Service, Heroku).
+Both the backend and the frontend are also well-suited for hosted application environments (e.g., Azure App Service, Heroku).
+
+For a cloud native application stack, focusing on cloud technologies, please see the related [Azure chat](https://github.com/sandnabba/azure-chat) project.
 
 ## Table of Contents
 
@@ -223,10 +225,7 @@ The `infrastructure/` directory contains configurations for setting up cloud res
 
 Growing list of ToDo items that will most likely never be completed:
 
-*   Made the backend API return the hostname
-    *   Will give a much better understanding of load balancing when scaling up horizontaly.
 *   Make log level configurable - implement proper logging instead of prints.
 *   Make multi stage build for frontend container
 *   Add Azure load balancer in Terraform
-*   Document how this app can be used for exploring cloud services. (Azure Exams etc)
 *   Add a /logging endpoint, that can be used to generate log messages or different severity

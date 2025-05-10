@@ -1,15 +1,12 @@
 import os
 from flask import Flask, request, jsonify, Response
 # Import db instance, init_db function, and Inventory model from database.py
-from database import db, init_db, Inventory
+from database import db, init_db, Inventory, Pastebin
 from flask_cors import CORS # Import CORS
 # Import text for raw SQL execution in health check
 from sqlalchemy import text
 from datetime import datetime, timedelta
 import uuid
-
-# Add Azure Blob Storage imports
-from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
 
 # --- Configuration ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -134,19 +131,19 @@ def health_check():
     db_status = "disconnected"
     db_error = None
     try:
-        # Perform a query against the actual inventory table to ensure it exists and is accessible
-        # Using count() is efficient and confirms table access.
+        # Perform a query against the tables to ensure they exist and are accessible
         db.session.query(Inventory.id).count()
-        db_status = "connected_and_table_accessible"
+        db.session.query(Pastebin.id).count()
+        db_status = "connected_and_tables_accessible"
         print("Database connection and table access check successful.")
         return jsonify({"status": "ok", "database": db_status}), 200
     except Exception as e:
         db_error = str(e)
         # Differentiate between general connection errors and table-specific errors
-        if "no such table: inventory" in db_error.lower():
-            db_status = "connected_table_missing"
-            print(f"Database connection okay, but 'inventory' table missing: {db_error}")
-            app.logger.error(f"Health check failed - 'inventory' table missing: {db_error}")
+        if "no such table" in db_error.lower():
+            db_status = "connected_tables_missing"
+            print(f"Database connection okay, but tables are missing: {db_error}")
+            app.logger.error(f"Health check failed - tables missing: {db_error}")
         else:
             db_status = "connection_error"
             print(f"Database connection check failed: {db_error}")
@@ -200,49 +197,89 @@ def crash_app():
 @app.route('/pastebin', methods=['POST'])
 def pastebin():
     """
-    Accepts a text string, uploads it to Azure Blob Storage with a 24h auto-delete policy,
-    and returns the blob URL.
+    Accepts a text string, stores it in SQLite database with a 24h auto-delete policy,
+    and returns the URL to retrieve it.
     Expects JSON: { "text": "your text here" }
     """
-    # Get config from environment variables
-    AZURE_STORAGE_CONNECTION_STRING = os.environ.get("AZURE_STORAGE_CONNECTION_STRING")
-    AZURE_STORAGE_CONTAINER = os.environ.get("AZURE_STORAGE_CONTAINER", "pastebin")
-
-    if not AZURE_STORAGE_CONNECTION_STRING:
-        return jsonify({"error": "Azure Storage connection string not configured"}), 500
-
     data = request.get_json()
     if not data or "text" not in data:
         return jsonify({"error": "Missing 'text' in request body"}), 400
 
     text = data["text"]
-    blob_name = f"pastebin-{uuid.uuid4().hex}.txt"
-
+    paste_id = uuid.uuid4().hex
+    
     try:
-        # Create container if it doesn't exist
-        blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
-        container_client = blob_service_client.get_container_client(AZURE_STORAGE_CONTAINER)
-        try:
-            container_client.create_container()
-        except Exception:
-            pass  # Ignore if already exists
-
-        # Upload the blob
-        blob_client = container_client.get_blob_client(blob_name)
-
-        # Set content type to "text/plain" so files can be opened in a browser
-        blob_client.upload_blob(text, overwrite=True, content_type="text/plain")
-
-        # Since container access type is 'blob', blobs are publicly readable.
-        # Construct the public blob URL directly.
-        blob_url = f"https://{blob_service_client.account_name}.blob.core.windows.net/{AZURE_STORAGE_CONTAINER}/{blob_name}"
-
-        # Inform the user that the blob will be deleted after 24h (if lifecycle policy is set in Azure)
+        # Calculate expiry time (24 hours from now)
         expiry = datetime.utcnow() + timedelta(hours=24)
-        return jsonify({"url": blob_url, "expires_at": expiry.isoformat() + "Z"}), 201
+        
+        # Create a new paste record in the database
+        new_paste = Pastebin(
+            id=paste_id,
+            content=text,
+            expires_at=expiry,
+            content_type="text/plain"
+        )
+        
+        db.session.add(new_paste)
+        db.session.commit()
+        
+        # Construct the URL for retrieving the paste
+        # Use relative URL that works with the frontend - include /api prefix
+        paste_url = f"/api/pastebin/{paste_id}"
+        
+        return jsonify({
+            "url": paste_url, 
+            "expires_at": expiry.isoformat() + "Z"
+        }), 201
     except Exception as e:
-        app.logger.error(f"Error uploading to pastebin: {e}")
-        return jsonify({"error": f"Failed to upload to pastebin: {str(e)}"}), 500
+        db.session.rollback()
+        app.logger.error(f"Error saving to pastebin: {e}")
+        return jsonify({"error": f"Failed to save to pastebin: {str(e)}"}), 500
+
+@app.route('/pastebin/<paste_id>', methods=['GET'])
+def get_paste(paste_id):
+    """
+    Retrieves a paste by ID from the SQLite database.
+    Returns 404 if the paste doesn't exist or has expired.
+    """
+    try:
+        paste = Pastebin.query.get(paste_id)
+        
+        if not paste or paste.expires_at < datetime.utcnow():
+            if paste:
+                # If paste exists but has expired, delete it
+                db.session.delete(paste)
+                db.session.commit()
+            return jsonify({"error": "Paste not found or has expired"}), 404
+        
+        # Set content type to match what's stored in the database
+        return Response(paste.content, mimetype=paste.content_type)
+    except Exception as e:
+        app.logger.error(f"Error retrieving paste: {e}")
+        return jsonify({"error": f"Failed to retrieve paste: {str(e)}"}), 500
+
+@app.route('/cleanup-pastes', methods=['POST'])
+def cleanup_expired_pastes():
+    """
+    Administrative endpoint to cleanup expired pastes from the database.
+    """
+    try:
+        now = datetime.utcnow()
+        expired_pastes = Pastebin.query.filter(Pastebin.expires_at < now).all()
+        delete_count = len(expired_pastes)
+        
+        for paste in expired_pastes:
+            db.session.delete(paste)
+        
+        db.session.commit()
+        return jsonify({
+            "status": "success", 
+            "message": f"Deleted {delete_count} expired pastes"
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        app.logger.error(f"Error cleaning up expired pastes: {e}")
+        return jsonify({"error": f"Failed to clean up expired pastes: {str(e)}"}), 500
 
 @app.route('/', methods=['GET'])
 def welcome():
@@ -259,7 +296,9 @@ Available endpoints:
   GET    /hello                    - Simple endpoint that responds with 'Hello, World!'.
   POST   /log                      - Log a message at a specified level.
   POST   /crash                    - Intentionally crash the application (for testing purposes).
-  POST   /pastebin                 - Upload text to Azure Blob Storage with a 24h auto-delete policy.
+  POST   /pastebin                 - Store text in the database with a 24h auto-delete policy.
+  GET    /pastebin/<paste_id>      - Retrieve a paste by ID.
+  POST   /cleanup-pastes           - Remove expired pastes from the database.
 """
     return Response(welcome_text, mimetype='text/plain')
 
@@ -273,6 +312,6 @@ if __name__ == "__main__":
     else:
         print("Database file does not exist yet, should be created by SQLAlchemy.")
     
-    # Use the PORT environment variable provided by Azure, default to 5000 if not set
+    # Use the PORT environment variable if set, default to 5000 if not set
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host='0.0.0.0', port=port)

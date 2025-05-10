@@ -3,4 +3,3 @@ Flask-RESTful
 Flask-Cors
 gunicorn
 flask-sqlalchemy
-azure-storage-blob
