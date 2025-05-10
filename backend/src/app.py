@@ -1,12 +1,58 @@
 import os
 from flask import Flask, request, jsonify, Response
-# Import db instance, init_db function, and Inventory model from database.py
+# Import db instance, init_db function, and models from database.py
 from database import db, init_db, Inventory, Pastebin
 from flask_cors import CORS # Import CORS
 # Import text for raw SQL execution in health check
 from sqlalchemy import text
 from datetime import datetime, timedelta
 import uuid
+import logging
+from logging.config import dictConfig
+import colorama
+
+# Initialize colorama for colored terminal output
+colorama.init()
+
+# Configure colorized logging
+class ColorFormatter(logging.Formatter):
+    COLORS = {
+        'DEBUG': colorama.Fore.BLUE,
+        'INFO': colorama.Fore.WHITE,  # Changed to WHITE for no color
+        'WARNING': colorama.Fore.YELLOW,
+        'ERROR': colorama.Fore.RED,
+        'CRITICAL': colorama.Fore.RED + colorama.Style.BRIGHT
+    }
+    
+    def format(self, record):
+        levelname = record.levelname
+        message = super().format(record)
+        return f"{self.COLORS.get(levelname, colorama.Fore.RESET)}{message}{colorama.Style.RESET_ALL}"
+
+# Configure the Flask logger
+dictConfig({
+    'version': 1,
+    'formatters': {
+        'colored': {
+            '()': ColorFormatter,
+            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'colored',
+            'level': 'DEBUG',
+        },
+    },
+    'root': {
+        'level': os.environ.get('LOG_LEVEL', 'INFO'),
+        'handlers': ['console'],
+    },
+})
+
+# Azure Blob Storage imports removed
 
 # --- Configuration ---
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -32,121 +78,123 @@ init_db(app)
 # Routes remain largely the same, but ensure they use the imported 'db' and 'Inventory'
 @app.route('/database/', methods=['GET'])
 def get_inventory():
-    print("Received GET request to fetch inventory.")
+    app.logger.info("Received GET request to fetch inventory.")
     try:
         # Use the imported Inventory model
         items = Inventory.query.all()
-        print(f"Fetched items: {[item.to_dict() for item in items]}")
+        app.logger.info(f"Fetched items: {[item.to_dict() for item in items]}")
         return jsonify([item.to_dict() for item in items])
     except Exception as e:
-        print(f"Error fetching inventory: {e}")
         app.logger.error(f"Error fetching inventory: {e}")
         return jsonify({"error": "Failed to fetch inventory"}), 500
 
 @app.route('/database/', methods=['POST'])
 def add_item():
-    print("Received POST request to add item.")
+    app.logger.info("Received POST request to add item.")
     try:
         data = request.json
         if not data or 'name' not in data or 'quantity' not in data or 'price' not in data:
-             print(f"Invalid data received: {data}")
+             app.logger.warning(f"Invalid data received: {data}")
              return jsonify({"error": "Missing required fields (name, quantity, price)"}), 400
-        print(f"Request data: {data}")
+        app.logger.info(f"Request data: {data}")
         # Use the imported Inventory model and db instance
         new_item = Inventory(name=data['name'], quantity=data['quantity'], price=data['price'])
         db.session.add(new_item)
         db.session.commit()
-        print(f"Item added to database: {new_item.to_dict()}")
+        app.logger.info(f"Item added to database: {new_item.to_dict()}")
         return jsonify(new_item.to_dict()), 201
     except Exception as e:
         db.session.rollback()
-        print(f"Error adding item: {e}")
         app.logger.error(f"Error adding item: {e}")
         return jsonify({"error": "Failed to add item"}), 500
 
 @app.route('/database/<int:item_id>', methods=['PUT'])
 def update_item(item_id):
-    print(f"Received PUT request for item ID: {item_id}")
+    app.logger.info(f"Received PUT request for item ID: {item_id}")
     try:
         data = request.json
         if not data:
-            print("No data provided for update.")
+            app.logger.warning("No data provided for update.")
             return jsonify({"error": "No data provided"}), 400
-        print(f"Request data: {data}")
+        app.logger.info(f"Request data: {data}")
         # Use the imported Inventory model and db instance
         item = db.session.get(Inventory, item_id)
         if not item:
-            print(f"Item with ID {item_id} not found.")
+            app.logger.warning(f"Item with ID {item_id} not found.")
             return jsonify({"error": "Item not found"}), 404
 
         item.name = data.get('name', item.name)
         item.quantity = data.get('quantity', item.quantity)
         item.price = data.get('price', item.price)
         db.session.commit()
-        print(f"Item updated: {item.to_dict()}")
+        app.logger.info(f"Item updated: {item.to_dict()}")
         return jsonify(item.to_dict())
     except Exception as e:
         db.session.rollback()
-        print(f"Error updating item {item_id}: {e}")
         app.logger.error(f"Error updating item {item_id}: {e}")
         return jsonify({"error": "Failed to update item"}), 500
 
 @app.route('/database/<int:item_id>', methods=['DELETE'])
 def delete_item(item_id):
-    print(f"Received DELETE request for item ID: {item_id}")
+    app.logger.info(f"Received DELETE request for item ID: {item_id}")
     try:
         # Use the imported Inventory model and db instance
         item = db.session.get(Inventory, item_id)
         if not item:
-            print(f"Item with ID {item_id} not found.")
+            app.logger.warning(f"Item with ID {item_id} not found.")
             return jsonify({"error": "Item not found"}), 404
 
         db.session.delete(item)
         db.session.commit()
-        print(f"Item deleted: ID {item_id}")
+        app.logger.info(f"Item deleted: ID {item_id}")
         return jsonify({"message": "Item deleted"})
     except Exception as e:
         db.session.rollback()
-        print(f"Error deleting item {item_id}: {e}")
         app.logger.error(f"Error deleting item {item_id}: {e}")
         return jsonify({"error": "Failed to delete item"}), 500
 
 @app.route('/environment', methods=['GET'])
 def get_environment():
     """Returns all environment variables available to the process."""
-    print("Received GET request for environment.")
+    app.logger.info("Received GET request for environment.")
     try:
         environment = dict(os.environ)  # Get all environment variables as a dictionary
-        print(f"Environment details: {environment}")
+        app.logger.info(f"Environment details: {environment}")
         return jsonify(environment), 200
     except Exception as e:
-        print(f"Error fetching environment details: {e}")
         app.logger.error(f"Error fetching environment details: {e}")
         return jsonify({"error": "Failed to fetch environment details"}), 500
 
 @app.route('/healthcheck', methods=['GET'])
 def health_check():
     """Checks the health of the application, including database connectivity and table access."""
-    print("Received GET request for health check.")
+    app.logger.info("Received GET request for health check.")
     db_status = "disconnected"
     db_error = None
     try:
-        # Perform a query against the tables to ensure they exist and are accessible
-        db.session.query(Inventory.id).count()
-        db.session.query(Pastebin.id).count()
+        # Perform a query against the actual tables to ensure they exist and are accessible
+        # Using count() is efficient and confirms table access.
+        inventory_count = db.session.query(Inventory.id).count()
+        pastebin_count = db.session.query(Pastebin.id).count()
+        
         db_status = "connected_and_tables_accessible"
-        print("Database connection and table access check successful.")
-        return jsonify({"status": "ok", "database": db_status}), 200
+        app.logger.info("Database connection and table access check successful.")
+        return jsonify({
+            "status": "ok", 
+            "database": db_status,
+            "inventory_count": inventory_count,
+            "pastebin_count": pastebin_count
+        }), 200
     except Exception as e:
         db_error = str(e)
         # Differentiate between general connection errors and table-specific errors
         if "no such table" in db_error.lower():
-            db_status = "connected_tables_missing"
-            print(f"Database connection okay, but tables are missing: {db_error}")
-            app.logger.error(f"Health check failed - tables missing: {db_error}")
+            db_status = "connected_table_missing"
+            app.logger.error(f"Database connection okay, but table missing: {db_error}")
+            app.logger.error(f"Health check failed - table missing: {db_error}")
         else:
             db_status = "connection_error"
-            print(f"Database connection check failed: {db_error}")
+            app.logger.error(f"Database connection check failed: {db_error}")
             app.logger.error(f"Health check failed - database connection error: {db_error}")
 
         return jsonify({
@@ -184,8 +232,18 @@ def trigger_log():
     if not log_func:
         return jsonify({"error": f"Invalid log level '{level}'. Valid levels: debug, info, warning, error, critical."}), 400
 
-    log_func(message)
-    return jsonify({"status": "logged", "level": level, "message": message}), 200
+    log_func(f"[API LOG REQUEST] {message}")
+    
+    # Log to console as well for clarity
+    app.logger.info(f"Log message created with level '{level}': {message}")
+    
+    return jsonify({
+        "status": "logged", 
+        "level": level, 
+        "message": message,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "destination": "server_log"
+    }), 200
 
 @app.route('/crash', methods=['POST'])
 def crash_app():
@@ -198,7 +256,7 @@ def crash_app():
 def pastebin():
     """
     Accepts a text string, stores it in SQLite database with a 24h auto-delete policy,
-    and returns the URL to retrieve it.
+    and returns the paste ID for retrieval.
     Expects JSON: { "text": "your text here" }
     """
     data = request.get_json()
@@ -206,76 +264,90 @@ def pastebin():
         return jsonify({"error": "Missing 'text' in request body"}), 400
 
     text = data["text"]
-    paste_id = uuid.uuid4().hex
+    paste_id = uuid.uuid4().hex  # Generate a unique ID
+    content_type = data.get("content_type", "text/plain")
     
+    # Set expiry to 24 hours from now
+    expiry = datetime.utcnow() + timedelta(hours=24)
+
     try:
-        # Calculate expiry time (24 hours from now)
-        expiry = datetime.utcnow() + timedelta(hours=24)
-        
-        # Create a new paste record in the database
+        # Create a new Pastebin entry
         new_paste = Pastebin(
             id=paste_id,
             content=text,
             expires_at=expiry,
-            content_type="text/plain"
+            content_type=content_type
         )
         
         db.session.add(new_paste)
         db.session.commit()
         
-        # Construct the URL for retrieving the paste
-        # Use relative URL that works with the frontend - include /api prefix
-        paste_url = f"/api/pastebin/{paste_id}"
+        # Construct the URL for the paste
+        paste_url = f"{request.url_root}pastebin/{paste_id}"
         
+        app.logger.info(f"Created new paste with ID: {paste_id}")
         return jsonify({
-            "url": paste_url, 
+            "id": paste_id,
+            "url": paste_url,
             "expires_at": expiry.isoformat() + "Z"
         }), 201
     except Exception as e:
         db.session.rollback()
-        app.logger.error(f"Error saving to pastebin: {e}")
-        return jsonify({"error": f"Failed to save to pastebin: {str(e)}"}), 500
+        app.logger.error(f"Error creating paste: {e}")
+        return jsonify({"error": f"Failed to create paste: {str(e)}"}), 500
 
 @app.route('/pastebin/<paste_id>', methods=['GET'])
 def get_paste(paste_id):
     """
-    Retrieves a paste by ID from the SQLite database.
-    Returns 404 if the paste doesn't exist or has expired.
+    Retrieves a paste by its ID.
     """
     try:
+        # Query the paste from the database
         paste = Pastebin.query.get(paste_id)
         
-        if not paste or paste.expires_at < datetime.utcnow():
-            if paste:
-                # If paste exists but has expired, delete it
-                db.session.delete(paste)
-                db.session.commit()
-            return jsonify({"error": "Paste not found or has expired"}), 404
+        if not paste:
+            app.logger.warning(f"Paste with ID {paste_id} not found")
+            return jsonify({"error": "Paste not found"}), 404
+            
+        # Check if the paste has expired
+        if paste.expires_at < datetime.utcnow():
+            app.logger.info(f"Paste with ID {paste_id} has expired")
+            # Clean up expired paste
+            db.session.delete(paste)
+            db.session.commit()
+            return jsonify({"error": "Paste has expired"}), 404
+            
+        # Return the paste content with appropriate content type
+        response = Response(paste.content, mimetype=paste.content_type)
+        return response
         
-        # Set content type to match what's stored in the database
-        return Response(paste.content, mimetype=paste.content_type)
     except Exception as e:
-        app.logger.error(f"Error retrieving paste: {e}")
+        app.logger.error(f"Error retrieving paste {paste_id}: {e}")
         return jsonify({"error": f"Failed to retrieve paste: {str(e)}"}), 500
 
-@app.route('/cleanup-pastes', methods=['POST'])
+@app.route('/pastebin/cleanup', methods=['POST'])
 def cleanup_expired_pastes():
     """
-    Administrative endpoint to cleanup expired pastes from the database.
+    Removes all expired pastes from the database.
+    This endpoint could be called periodically by a scheduled job.
     """
     try:
-        now = datetime.utcnow()
-        expired_pastes = Pastebin.query.filter(Pastebin.expires_at < now).all()
-        delete_count = len(expired_pastes)
+        # Find all expired pastes
+        expired_pastes = Pastebin.query.filter(Pastebin.expires_at < datetime.utcnow()).all()
+        count = len(expired_pastes)
         
+        # Delete all expired pastes
         for paste in expired_pastes:
             db.session.delete(paste)
         
         db.session.commit()
+        
+        app.logger.info(f"Cleaned up {count} expired pastes")
         return jsonify({
-            "status": "success", 
-            "message": f"Deleted {delete_count} expired pastes"
+            "message": f"Cleaned up {count} expired pastes",
+            "count": count
         }), 200
+        
     except Exception as e:
         db.session.rollback()
         app.logger.error(f"Error cleaning up expired pastes: {e}")
@@ -296,22 +368,22 @@ Available endpoints:
   GET    /hello                    - Simple endpoint that responds with 'Hello, World!'.
   POST   /log                      - Log a message at a specified level.
   POST   /crash                    - Intentionally crash the application (for testing purposes).
-  POST   /pastebin                 - Store text in the database with a 24h auto-delete policy.
+  POST   /pastebin                 - Upload text to SQLite database with a 24h auto-delete policy.
   GET    /pastebin/<paste_id>      - Retrieve a paste by ID.
-  POST   /cleanup-pastes           - Remove expired pastes from the database.
+  POST   /pastebin/cleanup         - Remove all expired pastes from the database.
 """
     return Response(welcome_text, mimetype='text/plain')
 
 # --- Application Runner ---
 if __name__ == "__main__":
-    print("Starting Flask application...")
+    app.logger.info("Starting Flask application...")
     db_path = os.path.join(instance_path, "database.db")
-    print(f"Database file expected at: {db_path}")
+    app.logger.info(f"Database file expected at: {db_path}")
     if os.path.exists(db_path):
-        print("Database file exists.")
+        app.logger.info("Database file exists.")
     else:
-        print("Database file does not exist yet, should be created by SQLAlchemy.")
+        app.logger.info("Database file does not exist yet, should be created by SQLAlchemy.")
     
-    # Use the PORT environment variable if set, default to 5000 if not set
+    # Use the PORT environment variable, default to 5000 if not set
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=True, host='0.0.0.0', port=port)

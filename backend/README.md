@@ -15,6 +15,7 @@ Beyond inventory management, the API includes endpoints for retrieving service e
         *   [Production Container](#production-container)
         *   [Development Container (with Live Reload)](#development-container-with-live-reload)
     *   [Python Virtual Environment](#python-virtual-environment)
+    *   [Azure deployment](#azure-deployment)
 
 ## Features
 
@@ -32,6 +33,7 @@ The application can be configured using environment variables. Below are the key
 |------------------------------|----------------------------------------|-----------------------------------------------------------------------------|
 | `SQLALCHEMY_DATABASE_URI`    | `sqlite:///instance/database.db`      | The database connection string. Defaults to a local SQLite database.       |
 | `PORT`                       | `5000`                                | The port the application listens on.                                       |
+| `LOG_LEVEL`                  | `INFO`                                | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).                    |
 
 
 ## Database
@@ -225,6 +227,7 @@ Example `Docker.env` file:
 # Docker.env
 PORT=5000
 SQLALCHEMY_DATABASE_URI=sqlite:///instance/database.db
+LOG_LEVEL=INFO
 ```
 
 **Note:**  
@@ -235,3 +238,28 @@ Never commit your `Docker.env` file to version control if it contains secrets.
 If you prefer not to use Docker, you can set up a local Python environment. Instructions for this method can be found here:
 
 *   **[Local Python Environment Setup](./docs/local-setup.md)**
+
+### Azure deployment
+
+The backend API can be deployed to Azure using either **App Services** or **Azure Container Instances**.
+
+A `Makefile` is provided with targets for both deployment options, utilizing the `Azure CLI (az)` command.
+
+**Note:** For production environments, it is recommended to manage the app or container infrastructure using Terraform or another infrastructure-as-code platform.
+
+#### Azure App Services
+
+- `zip`: Creates the application .zip file for deployment.
+- `setup`: Initializes the Azure App Service resources.
+- `deploy`: Deploys the zip file to the App Service.
+- `logs`: Tails Azure App Service logs.
+- `ssh`: Opens an SSH shell in the App Service container.
+
+#### Azure Container Instances
+
+- `acr-image`: Builds and pushes a Docker image to Azure Container Registry.
+- `container-deploy`: Deploys the container image to Azure Container Instances.  
+  *Note: You must provide `REGISTRY_USERNAME` and `REGISTRY_PASSWORD` as environment variables when running this target to avoid hardcoding secrets.*
+- `container-show`: Lists running container instances.
+
+Refer to the `Makefile` for usage details and required environment variables.

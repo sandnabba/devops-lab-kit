@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 // Import updateItem as well
-import { fetchInventory, deleteItem, addItem, updateItem, InventoryItem } from './http_handler';
+import { fetchInventory, deleteItem, addItem, updateItem, InventoryItem, createLogMessage } from './http_handler';
 // Import the modal component (ensure name matches the export)
 import ItemFormModal from './AddItemModal'; // Use the potentially renamed component
+import LogModal from './LogModal'; // Import the new LogModal component
 // Import the modal CSS
 import './Modal.css';
 import React from 'react';
@@ -23,6 +24,12 @@ function App() {
   const [pasteResult, setPasteResult] = useState<{ url: string; expires_at: string } | null>(null);
   const [pasteLoading, setPasteLoading] = useState(false);
   const [pasteError, setPasteError] = useState<string | null>(null);
+
+  // Log modal state
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [logSuccess, setLogSuccess] = useState<{ status: string; level: string; message: string } | null>(null);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
 
   const [environment, setEnvironment] = useState<any | null>(null);
   const [envLoading, setEnvLoading] = useState(false);
@@ -157,6 +164,34 @@ function App() {
     }
   };
 
+  // Log modal handlers
+  const openLogModal = () => {
+    setShowLogModal(true);
+    setLogSuccess(null);
+    setLogError(null);
+  };
+
+  const closeLogModal = () => {
+    setShowLogModal(false);
+    setLogSuccess(null);
+    setLogError(null);
+  };
+
+  const handleLogSubmit = async (level: string, message: string) => {
+    setLogLoading(true);
+    setLogError(null);
+    setLogSuccess(null);
+    try {
+      const result = await createLogMessage(apiBaseUrl, level, message);
+      setLogSuccess(result);
+      setTimeout(closeLogModal, 2000); // Auto close after success
+    } catch (err) {
+      setLogError(err instanceof Error ? err.message : 'Failed to create log message.');
+    } finally {
+      setLogLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadInventory();
   }, [apiBaseUrl]);
@@ -217,12 +252,24 @@ function App() {
         New Pastebin
       </button>
 
+      {/* Log Message Button */}
+      <button onClick={openLogModal} style={{ marginBottom: '20px', marginLeft: '10px' }}>
+        Create Log Message
+      </button>
+
       {/* Render the modal */}
       <ItemFormModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onSubmit={handleSaveItem}
         initialData={editingItem}
+      />
+
+      {/* Log Modal */}
+      <LogModal
+        isOpen={showLogModal}
+        onClose={closeLogModal}
+        onSubmit={handleLogSubmit}
       />
 
       {/* Pastebin Modal */}
@@ -266,6 +313,40 @@ function App() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Success notification for log creation */}
+      {logSuccess && (
+        <div style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          background: logSuccess.level === 'error' || logSuccess.level === 'critical' ? '#dc3545' :
+                      logSuccess.level === 'warning' ? '#ffc107' : 
+                      '#28a745',
+          color: 'white',
+          padding: '15px',
+          borderRadius: '4px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+          zIndex: 1000,
+          minWidth: '300px'
+        }}>
+          <div style={{ marginBottom: '5px', fontWeight: 'bold' }}>
+            Log Message Created
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Level:</span>
+            <strong>{logSuccess.level.toUpperCase()}</strong>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Time:</span>
+            <span>{new Date(logSuccess.timestamp).toLocaleTimeString()}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span>Destination:</span>
+            <span>{logSuccess.destination}</span>
           </div>
         </div>
       )}
