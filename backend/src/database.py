@@ -42,26 +42,24 @@ def init_db(app):
     """Initializes the database and creates tables if they don't exist."""
     db.init_app(app)
     with app.app_context():
-        print("Checking and creating database tables if they don't exist...")
+        app.logger.info("Checking and creating database tables if they don't exist...")
         try:
             # Call create_all on the metadata object, passing the engine and checkfirst
             db.metadata.create_all(bind=db.engine, checkfirst=True)
-            print("Database tables checked/created successfully.")
+            app.logger.info("Database tables checked/created successfully.")
             # Optional: Verify table existence
             inspector = sqlalchemy_inspect(db.engine)
             if 'inventory' in inspector.get_table_names():
-                print("Verified 'inventory' table exists.")
+                app.logger.info("Verified 'inventory' table exists.")
             else:
-                print("Warning: 'inventory' table not found after create_all().")
+                app.logger.warning("Warning: 'inventory' table not found after create_all().")
         except OperationalError as e:
             # Check if the error is specifically about the table already existing
             if "table inventory already exists" in str(e).lower():
-                print("Info: Table 'inventory' already exists, skipping creation.")
+                app.logger.info("Info: Table 'inventory' already exists, skipping creation.")
             else:
                 # Log other OperationalErrors as actual errors
-                print(f"Error during database initialization: {e}")
                 app.logger.error(f"Error during database initialization: {e}")
         except Exception as e:
             # Catch any other unexpected errors during initialization
-            print(f"Unexpected error during database initialization: {e}")
             app.logger.error(f"Unexpected error during database initialization: {e}")

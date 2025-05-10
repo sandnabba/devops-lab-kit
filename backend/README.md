@@ -14,6 +14,7 @@ Beyond inventory management, the API includes endpoints for retrieving service e
     *   [Using Docker container (Recommended)](#using-docker-container-recommended)
         *   [Production Container](#production-container)
         *   [Development Container (with Live Reload)](#development-container-with-live-reload)
+    *   [Azure Deployment](#azure-deployment)
     *   [Python Virtual Environment](#python-virtual-environment)
 
 ## Features
@@ -32,6 +33,7 @@ The application can be configured using environment variables. Below are the key
 |------------------------------|----------------------------------------|-----------------------------------------------------------------------------|
 | `SQLALCHEMY_DATABASE_URI`    | `sqlite:///instance/database.db`      | The database connection string. Defaults to a local SQLite database.       |
 | `PORT`                       | `5000`                                | The port the application listens on.                                       |
+| `LOG_LEVEL`                  | `INFO`                                | Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).                    |
 
 
 ## Database
@@ -225,10 +227,75 @@ Example `Docker.env` file:
 # Docker.env
 PORT=5000
 SQLALCHEMY_DATABASE_URI=sqlite:///instance/database.db
+LOG_LEVEL=INFO
 ```
 
 **Note:**  
 Never commit your `Docker.env` file to version control if it contains secrets.
+
+### Azure Deployment
+
+The backend API can be deployed to various Azure services. The project includes built-in support for Azure deployments through Makefile targets.
+
+#### Azure App Service
+
+Deploy the backend as an Azure App Service:
+
+1. **Create a zip file of the application**:
+   ```bash
+   make zip
+   ```
+
+2. **Set up the Azure resources** (only needed once):
+   ```bash
+   make setup
+   ```
+
+3. **Deploy the application**:
+   ```bash
+   make deploy
+   ```
+
+4. **View application logs**:
+   ```bash
+   make logs
+   ```
+
+5. **SSH into the App Service container**:
+   ```bash
+   make ssh
+   ```
+
+#### Azure Container Services
+
+Deploy the backend as a containerized application:
+
+1. **Build and push the Docker image to Azure Container Registry**:
+   ```bash
+   make build-acr-image
+   ```
+
+2. **Deploy to Azure Container Instances**:
+   ```bash
+   make create-container-instance
+   ```
+
+3. **View running container instances**:
+   ```bash
+   make container-instance-show
+   ```
+
+4. **Create a Container Apps environment**:
+   ```bash
+   make container-app-environment
+   ```
+
+5. **Deploy as a Container App**:
+   ```bash
+   make container-app-create
+   ```
+
+**Note**: These commands require proper Azure CLI configuration and relevant environment variables to be set in your `local.env` file. See `local.env.example` in the project root for reference.
 
 ### Python Virtual Environment
 
