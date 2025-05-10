@@ -2,11 +2,7 @@ module "storage_account" {
   source                = "./modules/storage-account"
   resource_group_name   = azurerm_resource_group.rg.name
   location              = azurerm_resource_group.rg.location
-  storage_account_name  = "devopslabkitstorage" # must be globally unique, 3-24 lowercase letters/numbers
-  tags = {
-    environment = "devops-lab-kit"
-    purpose     = "blob-storage"
-  }
+  storage_account_name  = "${var.identifier}labkitstorage" # must be globally unique, 3-24 lowercase letters/numbers
 }
 
 output "storage_account_name" {
