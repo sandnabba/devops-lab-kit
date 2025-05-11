@@ -23,7 +23,7 @@ It's a `React` application written in `TypeScript`, created with `Vite` and `Nod
 The frontend provides a simple user interface for the inventory application, interacting with the [backend API](../backend/README.md).
 
 <a href="web_frontend.png" target="_blank">
-  <img src="web_frontend.png" alt="Web Frontend Screenshot" width="600">
+  <img src="./docs/web_frontend.png" alt="Web Frontend Screenshot" width="600">
 </a>
 
 The API base URL is configurable within the UI. This allows demonstrating scenarios like running the frontend and backend on different hosts, and dealing with potential CORS or "Mixed Content" issues.
