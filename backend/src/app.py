@@ -323,8 +323,9 @@ def pastebin():
         db.session.add(new_paste)
         db.session.commit()
         
-        # Construct the URL for the paste
-        paste_url = f"{request.url_root}pastebin/{paste_id}"
+        # Construct a relative URL for the paste (to avoid Docker hostname issues)
+        # Use the /api prefix for consistency with documentation example
+        paste_url = f"/api/pastebin/{paste_id}"
         
         app.logger.info(f"Created new paste with ID: {paste_id}")
         return jsonify({
