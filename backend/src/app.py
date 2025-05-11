@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, send_from_directory
 # Import db instance, init_db function, and models from database.py
 from database import db, init_db, Inventory, Pastebin
 from flask_cors import CORS # Import CORS
@@ -10,6 +10,10 @@ import uuid
 import logging
 from logging.config import dictConfig
 import colorama
+# Import Swagger UI
+from flask_swagger_ui import get_swaggerui_blueprint
+# Import swagger configuration
+from swagger import get_swagger_specs
 
 # Initialize colorama for colored terminal output
 colorama.init()
@@ -18,7 +22,7 @@ colorama.init()
 class ColorFormatter(logging.Formatter):
     COLORS = {
         'DEBUG': colorama.Fore.BLUE,
-        'INFO': colorama.Fore.WHITE,  # Changed to WHITE for no color
+        'INFO': colorama.Fore.WHITE,
         'WARNING': colorama.Fore.YELLOW,
         'ERROR': colorama.Fore.RED,
         'CRITICAL': colorama.Fore.RED + colorama.Style.BRIGHT
@@ -52,8 +56,6 @@ dictConfig({
     },
 })
 
-# Azure Blob Storage imports removed
-
 # --- Configuration ---
 basedir = os.path.abspath(os.path.dirname(__file__))
 instance_path = os.path.join(basedir, 'instance')
@@ -74,11 +76,50 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 # Call the init_db function to bind db to the app and create tables
 init_db(app)
 
+# --- Swagger UI Configuration ---
+SWAGGER_URL = '/docs'  # Primary URL for accessing the Swagger UI
+SWAGGER_URL_ALT = '/api/docs'  # Alternative URL for accessing the Swagger UI
+API_URL = '/swagger.json'  # URL for accessing the API specification for /docs endpoint
+API_URL_ALT = '/api/swagger.json'  # URL for accessing the API specification for /api/docs endpoint
+
+# Create Swagger UI blueprint for the primary URL
+swagger_ui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': "DevOps Lab Kit API"
+    }
+)
+
+# Create Swagger UI blueprint for the alternative URL
+swagger_ui_blueprint_alt = get_swaggerui_blueprint(
+    SWAGGER_URL_ALT,
+    API_URL_ALT,  # Use the alternative API URL for the alternative Swagger UI
+    config={
+        'app_name': "DevOps Lab Kit API"
+    },
+    blueprint_name='swagger_ui_alt'  # Provide a unique name for this blueprint
+)
+
+# Register the Swagger UI blueprints
+app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
+app.register_blueprint(swagger_ui_blueprint_alt, url_prefix=SWAGGER_URL_ALT)
+
+# Create endpoints to serve the OpenAPI specification
+@app.route('/swagger.json')
+def swagger_json():
+    """Serves the API specification in JSON format."""
+    return jsonify(get_swagger_specs())
+
+@app.route('/api/swagger.json')
+def swagger_json_alt():
+    """Serves the API specification in JSON format (alternative URL)."""
+    return jsonify(get_swagger_specs())
+
 # --- Route Definitions ---
-# Routes remain largely the same, but ensure they use the imported 'db' and 'Inventory'
 @app.route('/database/', methods=['GET'])
 def get_inventory():
-    app.logger.info("Received GET request to fetch inventory.")
+    app.logger.debug("Received GET request to fetch inventory.")
     try:
         # Use the imported Inventory model
         items = Inventory.query.all()
@@ -156,7 +197,7 @@ def delete_item(item_id):
 @app.route('/environment', methods=['GET'])
 def get_environment():
     """Returns all environment variables available to the process."""
-    app.logger.info("Received GET request for environment.")
+    app.logger.debug("Received GET request for environment.")
     try:
         environment = dict(os.environ)  # Get all environment variables as a dictionary
         app.logger.info(f"Environment details: {environment}")
@@ -168,7 +209,7 @@ def get_environment():
 @app.route('/healthcheck', methods=['GET'])
 def health_check():
     """Checks the health of the application, including database connectivity and table access."""
-    app.logger.info("Received GET request for health check.")
+    app.logger.debug("Received GET request for health check.")
     db_status = "disconnected"
     db_error = None
     try:
@@ -371,6 +412,9 @@ Available endpoints:
   POST   /pastebin                 - Upload text to SQLite database with a 24h auto-delete policy.
   GET    /pastebin/<paste_id>      - Retrieve a paste by ID.
   POST   /pastebin/cleanup         - Remove all expired pastes from the database.
+  GET    /docs                     - Access the Swagger UI documentation.
+  GET    /api/docs                 - Alternative URL for Swagger UI documentation.
+  GET    /api/swagger.json         - Retrieve the API specification in JSON format.
 """
     return Response(welcome_text, mimetype='text/plain')
 

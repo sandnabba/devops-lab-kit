@@ -4,3 +4,4 @@ Flask-Cors
 gunicorn
 flask-sqlalchemy
 colorama
+flask-swagger-ui
