@@ -27,7 +27,13 @@ function App() {
 
   // Log modal state
   const [showLogModal, setShowLogModal] = useState(false);
-  const [logSuccess, setLogSuccess] = useState<{ status: string; level: string; message: string } | null>(null);
+  const [logSuccess, setLogSuccess] = useState<{ 
+    status: string; 
+    level: string; 
+    message: string;
+    timestamp: string;
+    destination: string;
+  } | null>(null);
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
 
@@ -155,7 +161,22 @@ function App() {
         throw new Error(err.error || resp.statusText);
       }
       const data = await resp.json();
-      setPasteResult({ url: data.url, expires_at: data.expires_at });
+      // Handle the URL from the backend
+      // The backend already returns a path with /api/pastebin/{id}
+      // We need to handle this carefully to avoid double /api/api paths
+      let fullUrl;
+      if (data.url.startsWith('http')) {
+        // Use as-is if it's already absolute
+        fullUrl = data.url;
+      } else if (data.url.startsWith('/api/')) {
+        // If the URL already starts with /api/, remove the /api from apiBaseUrl to avoid duplication
+        const baseWithoutApi = apiBaseUrl === '/api' ? '' : apiBaseUrl.replace(/\/api\/?$/, '');
+        fullUrl = `${baseWithoutApi}${data.url}`;
+      } else {
+        // Otherwise use the full apiBaseUrl with the path
+        fullUrl = `${apiBaseUrl}${data.url}`;
+      }
+      setPasteResult({ url: fullUrl, expires_at: data.expires_at });
     } catch (err) {
       setPasteError(err instanceof Error ? err.message : 'Failed to create paste.');
     } finally {
@@ -309,6 +330,8 @@ function App() {
         isOpen={showLogModal}
         onClose={closeLogModal}
         onSubmit={handleLogSubmit}
+        isLoading={logLoading}
+        error={logError}
       />
 
       {/* Pastebin Modal */}
@@ -344,7 +367,8 @@ function App() {
                 <strong>Paste URL:</strong>
                 <div>
                   <a href={pasteResult.url} target="_blank" rel="noopener noreferrer">
-                    {pasteResult.url}
+                    {/* Display the full URL including hostname for clarity */}
+                    {window.location.origin}{pasteResult.url.replace(/^https?:\/\/[^/]+/, '')}
                   </a>
                 </div>
                 <div style={{ fontSize: '0.9em', color: '#555' }}>
