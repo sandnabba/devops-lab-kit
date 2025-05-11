@@ -27,13 +27,38 @@ function App() {
 
   // Log modal state
   const [showLogModal, setShowLogModal] = useState(false);
-  const [logSuccess, setLogSuccess] = useState<{ status: string; level: string; message: string } | null>(null);
+  const [logSuccess, setLogSuccess] = useState<{ 
+    status: string; 
+    level: string; 
+    message: string;
+    timestamp: string;
+    destination: string;
+  } | null>(null);
   const [logLoading, setLogLoading] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
 
   const [environment, setEnvironment] = useState<any | null>(null);
   const [envLoading, setEnvLoading] = useState(false);
   const [envError, setEnvError] = useState<string | null>(null);
+
+  // Function to open the API documentation
+  const openApiDocs = () => {
+    // Always use the /api/docs/ path with trailing slash to avoid redirects
+    let docsUrl;
+    if (apiBaseUrl === '/api') {
+      // When using relative path, manually construct the URL
+      // For development environment, we'll use the current window location
+      const host = window.location.protocol + '//' + window.location.host;
+      
+      // Use /api/docs/ which is correctly proxied and works in development
+      docsUrl = `${host}/api/docs/`;
+    } else {
+      // When using a custom API URL
+      const baseUrl = apiBaseUrl.replace(/\/$/, ''); // Remove trailing slash if present
+      docsUrl = `${baseUrl}/api/docs/`;
+    }
+    window.open(docsUrl, '_blank');
+  };
 
   const loadInventory = async () => {
     setError(null); // Clear previous errors
@@ -136,7 +161,22 @@ function App() {
         throw new Error(err.error || resp.statusText);
       }
       const data = await resp.json();
-      setPasteResult({ url: data.url, expires_at: data.expires_at });
+      // Handle the URL from the backend
+      // The backend already returns a path with /api/pastebin/{id}
+      // We need to handle this carefully to avoid double /api/api paths
+      let fullUrl;
+      if (data.url.startsWith('http')) {
+        // Use as-is if it's already absolute
+        fullUrl = data.url;
+      } else if (data.url.startsWith('/api/')) {
+        // If the URL already starts with /api/, remove the /api from apiBaseUrl to avoid duplication
+        const baseWithoutApi = apiBaseUrl === '/api' ? '' : apiBaseUrl.replace(/\/api\/?$/, '');
+        fullUrl = `${baseWithoutApi}${data.url}`;
+      } else {
+        // Otherwise use the full apiBaseUrl with the path
+        fullUrl = `${apiBaseUrl}${data.url}`;
+      }
+      setPasteResult({ url: fullUrl, expires_at: data.expires_at });
     } catch (err) {
       setPasteError(err instanceof Error ? err.message : 'Failed to create paste.');
     } finally {
@@ -201,16 +241,37 @@ function App() {
       <h1>DevOps LabKit</h1>
 
       {/* API URL Configuration */}
-      <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }}>
-        <label htmlFor="apiUrl" style={{ marginRight: '10px', fontWeight: 'bold' }}>API Base URL:</label>
-        <input
-          type="text"
-          id="apiUrl"
-          value={apiBaseUrl}
-          onChange={(e) => setApiBaseUrl(e.target.value)}
-          placeholder="/api or http://localhost:5000"
-          style={{ width: '300px', padding: '5px' }}
-        />
+      <div style={{ marginBottom: '20px', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+          <label htmlFor="apiUrl" style={{ marginRight: '10px', fontWeight: 'bold' }}>API Base URL:</label>
+          <input
+            type="text"
+            id="apiUrl"
+            value={apiBaseUrl}
+            onChange={(e) => setApiBaseUrl(e.target.value)}
+            placeholder="/api or http://localhost:5000"
+            style={{ width: '300px', padding: '5px' }}
+          />
+          {/* Documentation Button - styled to stand out and positioned next to URL input */}
+          <button
+            onClick={openApiDocs}
+            style={{ 
+              marginLeft: '15px',
+              backgroundColor: '#6200ee', // Purple color for emphasis
+              color: 'white',
+              fontWeight: 'bold',
+              padding: '6px 12px',
+              borderRadius: '4px',
+              border: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            API Documentation
+            <span style={{ fontSize: '0.8em' }}>↗</span> {/* Small arrow indicating external link */}
+          </button>
+        </div>
         <p style={{ fontSize: '0.8em', color: '#555', marginTop: '5px' }}>
           (Inventory will reload automatically when URL changes or on refresh/CRUD actions)
         </p>
@@ -221,6 +282,20 @@ function App() {
           disabled={envLoading}
         >
           {envLoading ? 'Loading Environment...' : 'Show Environment'}
+        </button>
+        {/* Pastebin Button */}
+        <button 
+          onClick={openPasteModal} 
+          style={{ marginLeft: '10px' }}
+        >
+          New Pastebin
+        </button>
+        {/* Log Message Button */}
+        <button 
+          onClick={openLogModal} 
+          style={{ marginLeft: '10px' }}
+        >
+          Create Log Message
         </button>
       </div>
       {/* Environment Output */}
@@ -242,21 +317,6 @@ function App() {
         </pre>
       )}
 
-      {/* Use handler to open modal for adding */}
-      <button onClick={handleOpenAddModal} className="add-item-button">
-        Add New Item
-      </button>
-
-      {/* Pastebin Button */}
-      <button onClick={openPasteModal} style={{ marginBottom: '20px', marginLeft: '10px' }}>
-        New Pastebin
-      </button>
-
-      {/* Log Message Button */}
-      <button onClick={openLogModal} style={{ marginBottom: '20px', marginLeft: '10px' }}>
-        Create Log Message
-      </button>
-
       {/* Render the modal */}
       <ItemFormModal
         isOpen={isModalOpen}
@@ -270,6 +330,8 @@ function App() {
         isOpen={showLogModal}
         onClose={closeLogModal}
         onSubmit={handleLogSubmit}
+        isLoading={logLoading}
+        error={logError}
       />
 
       {/* Pastebin Modal */}
@@ -305,7 +367,8 @@ function App() {
                 <strong>Paste URL:</strong>
                 <div>
                   <a href={pasteResult.url} target="_blank" rel="noopener noreferrer">
-                    {pasteResult.url}
+                    {/* Display the full URL including hostname for clarity */}
+                    {window.location.origin}{pasteResult.url.replace(/^https?:\/\/[^/]+/, '')}
                   </a>
                 </div>
                 <div style={{ fontSize: '0.9em', color: '#555' }}>
@@ -405,6 +468,11 @@ function App() {
 
       <button onClick={loadInventory} className="refresh-button" disabled={loading}>
         {loading ? 'Refreshing...' : 'Refresh List'}
+      </button>
+      
+      {/* Add new item button moved next to refresh button */}
+      <button onClick={handleOpenAddModal} className="add-item-button" style={{ marginLeft: '10px' }}>
+        Add New Item
       </button>
     </div>
   );

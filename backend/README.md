@@ -22,7 +22,11 @@ Beyond inventory management, the API includes endpoints for retrieving service e
 * **Flask Framework**: Lightweight and flexible Python web framework.
   * **Flask-SQLAlchemy**: Provides ORM capabilities for database interaction. Uses SQLite (a simple file-based database stored in the `instance/` directory) by default. Transitioning to other databases like MySQL or PostgreSQL is straightforward with minimal code changes.
   * **Flask-CORS**: Handles Cross-Origin Resource Sharing for frontend integration.
+  * **Flask-Swagger-UI**: Provides interactive API documentation via Swagger UI.
 *   **RESTful API**: Provides standard HTTP endpoints for managing inventory items.
+*   **API Documentation**: Interactive Swagger UI documentation available at `/docs`.
+*   **Colorized Logging**: Console output with color-coded log levels for improved readability.
+*   **Configurable Logging**: Log level can be adjusted via the `LOG_LEVEL` environment variable.
 *   **Docker Support**: Includes a multi-stage Dockerfile for development and production builds.
 
 ## Configuration
@@ -39,8 +43,17 @@ The application can be configured using environment variables. Below are the key
 ## Database
 
 *   The application uses SQLite by default. The database file (`database.db`) is automatically created inside the `instance/` directory when the application first runs ([`src/app.py`](src/app.py), [`src/database.py`](src/database.py)). When running via Docker, this directory should ideally be mounted as a volume for persistence.
-*   The database schema is defined in [`src/database.py`](src/database.py) using the `Inventory` model.
+*   The database schema is defined in [`src/database.py`](src/database.py) using the `Inventory` and `Pastebin` models.
 *   Database initialization and table creation happen automatically on startup ([`database.init_db`](src/database.py)).
+
+## API Documentation
+
+The API is documented using Swagger/OpenAPI specification:
+
+* **Interactive Documentation**: Access the Swagger UI at `/docs` when the server is running. This provides an interactive interface to explore and test all available endpoints.
+  * An alternative URL is also available at `/api/docs` for backward compatibility.
+* **API Specification**: The OpenAPI specification is available in JSON format at `/api/swagger.json`.
+* **Documentation Configuration**: The API documentation is configured in [`src/swagger.py`](src/swagger.py).
 
 ## API Endpoints
 
@@ -57,7 +70,10 @@ The application can be configured using environment variables. Below are the key
 | `POST`   | `/crash`             | Intentionally crashes the entire application.       | None                                    |
 | `POST`   | `/pastebin`          | Stores text in the database and returns a URL (expires in 24h). | JSON with `text` |
 | `GET`    | `/pastebin/<paste_id>` | Retrieves a paste by ID.                           | None                                    |
-| `POST`   | `/cleanup-pastes`    | Removes expired pastes from the database.            | None                                    |
+| `POST`   | `/pastebin/cleanup`    | Removes expired pastes from the database.            | None                                    |
+| `GET`    | `/docs`                | Interactive Swagger UI API documentation.            | None                                    |
+| `GET`    | `/api/docs`            | Alternative URL for Swagger UI documentation.        | None                                    |
+| `GET`    | `/api/swagger.json`    | OpenAPI specification in JSON format.                | None                                    |
 
 ### Example: Adding an Item using `curl`
 
@@ -153,7 +169,7 @@ curl http://localhost:5000/pastebin/a1b2c3d4e5f6...
 To manually clean up expired pastes from the database:
 
 ```bash
-curl -X POST http://localhost:5000/cleanup-pastes
+curl -X POST http://localhost:5000/pastebin/cleanup
 ```
 
 The response will indicate how many expired pastes were deleted:

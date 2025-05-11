@@ -9,6 +9,10 @@ docker-network:
 build-dev-container:
 	docker build -t frontend-dev -f Dockerfile.dev .
 
+# Build the production Docker image
+build-prod:
+	docker build -t devops-lab-kit-frontend:latest .
+
 # Run the development container with live reload and code mounting
 run-dev-container: docker-network
 	docker run -it --rm \
@@ -19,8 +23,20 @@ run-dev-container: docker-network
 		--name frontend-dev-container \
 		frontend-dev
 
+# Run the production container
+run-prod: docker-network
+	docker run -d --rm \
+		-p 80:80 \
+		--network devopslabkit \
+		--name frontend-prod-container \
+		devops-lab-kit-frontend:latest
+
 # Remove the development container if it's running
 stop-dev-container:
 	-docker stop frontend-dev-container
 
-.PHONY: build-dev-container run-dev-container stop-dev-container network
+# Remove the production container if it's running
+stop-prod:
+	-docker stop frontend-prod-container
+
+.PHONY: build-dev-container build-prod run-dev-container run-prod stop-dev-container stop-prod docker-network

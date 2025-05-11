@@ -203,8 +203,8 @@ You can find more details in the [Backend README](./backend/README.md).
 
 The frontend is a TypeScript application built using VITE. It serves the user interface for the web application.
 
-<a href="./frontend/web_frontend.png" target="_blank">
-  <img src="./frontend/web_frontend.png" alt="Web Frontend Screenshot" width="400">
+<a href="./frontend/docs/web_frontend.png" target="_blank">
+  <img src="./frontend/docs/web_frontend.png" alt="Web Frontend Screenshot" width="400">
 </a>
 
 The API base URL is customisable to demonstrate how a user could run the web service at one computer, but use a backend somewhere else. (And to demonstrate CORS handling and "Mixed Content" TLS errors).
